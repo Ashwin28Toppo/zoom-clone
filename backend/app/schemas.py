@@ -20,6 +20,13 @@ class CreateScheduledMeetingRequest(BaseModel):
 
 class JoinMeetingRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=255)
+    is_audio_on: bool = True
+    is_video_on: bool = True
+
+
+class UpdateMediaStateRequest(BaseModel):
+    is_audio_on: Optional[bool] = None
+    is_video_on: Optional[bool] = None
 
 
 # ─── Response Schemas ──────────────────────────────────────────

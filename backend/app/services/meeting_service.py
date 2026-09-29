@@ -15,6 +15,7 @@ from ..schemas import (
     JoinMeetingRequest,
     MeetingResponse,
     ParticipantResponse,
+    UpdateMediaStateRequest,
 )
 
 
@@ -154,6 +155,10 @@ def join_meeting(
         .first()
     )
     if existing:
+        existing.is_audio_on = request.is_audio_on
+        existing.is_video_on = request.is_video_on
+        db.commit()
+        db.refresh(existing)
         return ParticipantResponse.model_validate(existing)
 
     # First participant becomes host
@@ -168,6 +173,8 @@ def join_meeting(
         meeting_id=meeting_id,
         display_name=request.display_name,
         role=role,
+        is_audio_on=request.is_audio_on,
+        is_video_on=request.is_video_on,
     )
     db.add(participant)
     db.commit()
@@ -227,3 +234,54 @@ def get_participants(db: Session, meeting_id: str) -> list[ParticipantResponse]:
         .all()
     )
     return [ParticipantResponse.model_validate(p) for p in participants]
+
+
+def update_participant_media(
+    db: Session,
+    meeting_id: str,
+    participant_id: int,
+    request: UpdateMediaStateRequest,
+) -> ParticipantResponse | None:
+    """Update participant audio/video toggle states."""
+    participant = (
+        db.query(Participant)
+        .filter(
+            Participant.id == participant_id,
+            Participant.meeting_id == meeting_id,
+            Participant.left_at.is_(None),
+        )
+        .first()
+    )
+    if not participant:
+        return None
+
+    if request.is_audio_on is not None:
+        participant.is_audio_on = request.is_audio_on
+    if request.is_video_on is not None:
+        participant.is_video_on = request.is_video_on
+
+    db.commit()
+    db.refresh(participant)
+    return ParticipantResponse.model_validate(participant)
+
+
+def mute_all_participants(db: Session, meeting_id: str) -> list[ParticipantResponse]:
+    """Mute all active participants in a meeting (host control)."""
+    participants = (
+        db.query(Participant)
+        .filter(
+            Participant.meeting_id == meeting_id,
+            Participant.left_at.is_(None),
+        )
+        .all()
+    )
+    for p in participants:
+        p.is_audio_on = False
+    db.commit()
+    return [ParticipantResponse.model_validate(p) for p in participants]
+
+
+def remove_participant(db: Session, meeting_id: str, participant_id: int) -> bool:
+    """Remove a participant from the meeting (host control / kick)."""
+    return leave_meeting(db, meeting_id, participant_id)
+

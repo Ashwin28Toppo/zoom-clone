@@ -12,6 +12,7 @@ from ..schemas import (
     MeetingResponse,
     MeetingListResponse,
     ParticipantResponse,
+    UpdateMediaStateRequest,
 )
 from ..services import meeting_service
 
@@ -52,7 +53,7 @@ def get_recent_meetings(db: Session = Depends(get_db)):
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)
 def get_meeting(meeting_id: str, db: Session = Depends(get_db)):
-    """Get a specific meeting by its meeting ID."""
+    """Get a specific meeting by its meeting ID (validates meeting existence)."""
     meeting = meeting_service.get_meeting_by_id(db, meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
@@ -65,7 +66,7 @@ def join_meeting(
     request: JoinMeetingRequest,
     db: Session = Depends(get_db),
 ):
-    """Join an existing meeting as a participant."""
+    """Join an existing meeting as a participant with display name and initial media states."""
     try:
         return meeting_service.join_meeting(db, meeting_id, request)
     except ValueError as e:
@@ -83,6 +84,42 @@ def leave_meeting(
     if not success:
         raise HTTPException(status_code=404, detail="Participant not found")
     return {"message": "Left meeting successfully"}
+
+
+@router.patch("/{meeting_id}/participants/{participant_id}/media", response_model=ParticipantResponse)
+def update_participant_media(
+    meeting_id: str,
+    participant_id: int,
+    request: UpdateMediaStateRequest,
+    db: Session = Depends(get_db),
+):
+    """Update participant audio/video toggle states."""
+    participant = meeting_service.update_participant_media(db, meeting_id, participant_id, request)
+    if not participant:
+        raise HTTPException(status_code=404, detail="Active participant not found")
+    return participant
+
+
+@router.post("/{meeting_id}/mute-all", response_model=list[ParticipantResponse])
+def mute_all_participants(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+):
+    """Mute all active participants in a meeting (host control)."""
+    return meeting_service.mute_all_participants(db, meeting_id)
+
+
+@router.delete("/{meeting_id}/participants/{participant_id}")
+def remove_participant(
+    meeting_id: str,
+    participant_id: int,
+    db: Session = Depends(get_db),
+):
+    """Remove/kick a participant from the meeting (host control)."""
+    success = meeting_service.remove_participant(db, meeting_id, participant_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return {"message": "Participant removed successfully"}
 
 
 @router.put("/{meeting_id}/end", response_model=MeetingResponse)
