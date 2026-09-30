@@ -1,0 +1,250 @@
+/* Zoom Pre-Join Room Styling */
+
+.zm-prejoin-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #121417;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.zm-prejoin-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+.zm-prejoin-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a0aec0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  transition: color 0.15s;
+  width: fit-content;
+}
+
+.zm-prejoin-back:hover {
+  color: #ffffff;
+}
+
+.zm-prejoin-center-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: 12px;
+}
+
+.zm-prejoin-content {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+/* Left: Video Preview Box matching input_file_3.png */
+.zm-preview-container {
+  width: 580px;
+  height: 380px;
+  background-color: #1a1d24;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2d3340;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+}
+
+.zm-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.zm-preview-avatar-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.zm-preview-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0e71eb, #00c6ff);
+  color: #ffffff;
+  font-size: 38px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zm-preview-off-label {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.zm-preview-toolbar {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 20, 23, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+}
+
+.zm-preview-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-preview-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.zm-preview-btn.muted {
+  color: #ff4d4f;
+}
+
+.zm-preview-btn.bg-btn {
+  color: #38bdf8;
+}
+
+/* Right: Form Card matching input_file_3.png */
+.zm-prejoin-form-card {
+  width: 380px;
+  background-color: #181b20;
+  border: 1px solid #282c35;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+}
+
+.zm-prejoin-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 18px;
+}
+
+.zm-prejoin-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.zm-prejoin-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.zm-prejoin-input {
+  background-color: #101215;
+  border: 1px solid #2f3440;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.zm-prejoin-input:focus {
+  border-color: #0e71eb;
+}
+
+.zm-prejoin-error-box {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.zm-prejoin-btn-join {
+  width: 100%;
+  background-color: #0e71eb;
+  border: none;
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.15s;
+}
+
+.zm-prejoin-btn-join:hover:not(:disabled) {
+  background-color: #005ce6;
+}
+
+.zm-prejoin-btn-join:disabled {
+  background-color: #2b3548;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.zm-prejoin-footer {
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+  padding: 24px 0 8px;
+}
+
+@media (max-width: 980px) {
+  .zm-prejoin-content {
+    flex-direction: column;
+  }
+  .zm-preview-container {
+    width: 100%;
+    max-width: 540px;
+    height: 320px;
+  }
+  .zm-prejoin-form-card {
+    width: 100%;
+    max-width: 540px;
+  }
+}

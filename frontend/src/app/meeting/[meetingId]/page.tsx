@@ -1,11 +1,12 @@
 "use client";
 
-import React, { use, useState, useEffect, useRef, useTransition } from "react";
+import React, { use, useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   getMeetingById,
   getParticipants,
+  joinMeeting,
   leaveMeeting,
   updateParticipantMedia,
   muteAllParticipants,
@@ -26,12 +27,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  // Meeting State
+  // Meeting & Participant State
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipant, setCurrentParticipant] = useState<Participant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMeetingEnded, setIsMeetingEnded] = useState(false);
+  const [isParticipantRemoved, setIsParticipantRemoved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Local Media State
@@ -53,13 +55,34 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   // Timer State (elapsed meeting seconds)
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // 1. Initialize meeting & participant data
+  // Ref Locks for concurrency & polling deduplication
+  const isPollingRef = useRef(false);
+  const isLeavingRef = useRef(false);
+  const isEndingRef = useRef(false);
+  const isActionPendingRef = useRef(false);
+
+  // Stop all local media tracks helper
+  const stopLocalMedia = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {
+          // ignore
+        }
+      });
+      localStreamRef.current = null;
+    }
+  }, []);
+
+  // 1. Initialize meeting & participant data (with auto-join fallback on direct URL navigation)
   useEffect(() => {
     let isMounted = true;
 
     async function initRoom() {
       try {
         setIsLoading(true);
+        setErrorMessage(null);
         const meetingData = await getMeetingById(meetingId);
 
         if (!isMounted) return;
@@ -72,24 +95,44 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
         setMeeting(meetingData);
 
-        // Fetch active participants
+        // Fetch active participants list
         const participantsData = await getParticipants(meetingId);
         if (!isMounted) return;
         setParticipants(participantsData);
 
         // Restore participant from sessionStorage if available
+        let activeParticipant: Participant | null = null;
         if (typeof window !== "undefined") {
           const stored = sessionStorage.getItem(`zoom_participant_${meetingId}`);
           if (stored) {
             try {
-              const parsed = JSON.parse(stored) as Participant;
-              setCurrentParticipant(parsed);
-              setIsAudioOn(parsed.is_audio_on);
-              setIsVideoOn(parsed.is_video_on);
+              activeParticipant = JSON.parse(stored) as Participant;
             } catch {
-              // fallback
+              activeParticipant = null;
             }
           }
+        }
+
+        // If no stored participant (e.g. direct URL visit or refresh), auto-join as Ashwin Toppo
+        if (!activeParticipant) {
+          try {
+            activeParticipant = await joinMeeting(meetingId, {
+              display_name: "Ashwin Toppo",
+              is_audio_on: true,
+              is_video_on: true,
+            });
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem(`zoom_participant_${meetingId}`, JSON.stringify(activeParticipant));
+            }
+          } catch {
+            // If join fails, continue with fallback
+          }
+        }
+
+        if (activeParticipant && isMounted) {
+          setCurrentParticipant(activeParticipant);
+          setIsAudioOn(activeParticipant.is_audio_on);
+          setIsVideoOn(activeParticipant.is_video_on);
         }
 
         setIsLoading(false);
@@ -109,12 +152,15 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     };
   }, [meetingId]);
 
-  // 2. Poll participants & meeting status every 3s to stay synced
+  // 2. Safe, deduplicated Polling for Participants & Meeting Status (every 3s)
   useEffect(() => {
-    if (isMeetingEnded || errorMessage) return;
+    if (isMeetingEnded || isParticipantRemoved || errorMessage) return;
 
     const interval = setInterval(async () => {
+      if (document.hidden || isPollingRef.current) return;
+
       try {
+        isPollingRef.current = true;
         const [updatedMeeting, updatedParticipants] = await Promise.all([
           getMeetingById(meetingId),
           getParticipants(meetingId),
@@ -122,17 +168,44 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
         if (updatedMeeting.status === "ended") {
           setIsMeetingEnded(true);
-        } else {
-          setMeeting(updatedMeeting);
-          setParticipants(updatedParticipants);
+          stopLocalMedia();
+          return;
+        }
+
+        setMeeting(updatedMeeting);
+        setParticipants(updatedParticipants);
+
+        // Check if current participant was removed by host
+        if (currentParticipant?.id) {
+          const stillActive = updatedParticipants.find((p) => p.id === currentParticipant.id);
+          if (!stillActive) {
+            setIsParticipantRemoved(true);
+            stopLocalMedia();
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem(`zoom_participant_${meetingId}`);
+            }
+            return;
+          }
+
+          // Check if remote mute was applied to this participant (e.g. host Mute All)
+          if (!stillActive.is_audio_on && isAudioOn) {
+            setIsAudioOn(false);
+            if (localStreamRef.current) {
+              localStreamRef.current.getAudioTracks().forEach((t) => {
+                t.enabled = false;
+              });
+            }
+          }
         }
       } catch {
-        // Silently keep current state on temporary network jitter
+        // Retain current state gracefully on transient network jitter
+      } finally {
+        isPollingRef.current = false;
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [meetingId, isMeetingEnded, errorMessage]);
+  }, [meetingId, isMeetingEnded, isParticipantRemoved, errorMessage, currentParticipant, isAudioOn, stopLocalMedia]);
 
   // 3. Meeting Timer
   useEffect(() => {
@@ -142,7 +215,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // 4. Request and manage local camera/microphone media stream
+  // 4. Manage local camera & microphone media stream
   useEffect(() => {
     let active = true;
 
@@ -164,7 +237,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           videoRef.current.srcObject = stream;
         }
 
-        // Apply initial audio/video states to hardware tracks
+        // Apply audio & video enabled states to hardware tracks
         stream.getAudioTracks().forEach((t) => {
           t.enabled = isAudioOn;
         });
@@ -183,14 +256,21 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
     startMedia();
 
+    // Register beforeunload cleanup so camera/mic lights turn off immediately
+    const handleUnload = () => {
+      stopLocalMedia();
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+
     return () => {
       active = false;
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-      }
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
+      stopLocalMedia();
     };
-  }, [isAudioOn, isVideoOn]);
+  }, [isAudioOn, isVideoOn, stopLocalMedia]);
 
   // 5. Toggle Audio (Mute / Unmute)
   async function handleToggleAudio() {
@@ -203,14 +283,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       });
     }
 
-    // Call backend participant media state API if participant ID is known
     if (currentParticipant?.id) {
       try {
         await updateParticipantMedia(meetingId, currentParticipant.id, {
           is_audio_on: nextState,
         });
       } catch {
-        // Log or handle gracefully
+        // Continue gracefully
       }
     }
   }
@@ -226,31 +305,29 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       });
     }
 
-    // Call backend participant media state API
     if (currentParticipant?.id) {
       try {
         await updateParticipantMedia(meetingId, currentParticipant.id, {
           is_video_on: nextState,
         });
       } catch {
-        // Log or handle gracefully
+        // Continue gracefully
       }
     }
   }
 
-  // 7. Leave Meeting
+  // 7. Leave Meeting (Deduplicated)
   async function handleLeaveMeeting() {
+    if (isLeavingRef.current) return;
     try {
+      isLeavingRef.current = true;
       if (currentParticipant?.id) {
         await leaveMeeting(meetingId, currentParticipant.id);
       }
     } catch {
-      // Continue navigating back even if leave API fails
+      // Continue navigation even if leave API fails
     } finally {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-        localStreamRef.current = null;
-      }
+      stopLocalMedia();
       if (typeof window !== "undefined") {
         sessionStorage.removeItem(`zoom_participant_${meetingId}`);
       }
@@ -260,18 +337,17 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
-  // 8. End Meeting for All (Host action)
+  // 8. End Meeting for All (Host action - Deduplicated)
   async function handleEndMeeting() {
+    if (isEndingRef.current) return;
     try {
+      isEndingRef.current = true;
       await endMeeting(meetingId);
       setIsMeetingEnded(true);
     } catch {
       // Handle error
     } finally {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-        localStreamRef.current = null;
-      }
+      stopLocalMedia();
       setIsEndModalOpen(false);
       startTransition(() => {
         router.push("/dashboard");
@@ -281,7 +357,9 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   // 9. Host Mute All
   async function handleMuteAll() {
+    if (isActionPendingRef.current) return;
     try {
+      isActionPendingRef.current = true;
       const updated = await muteAllParticipants(meetingId);
       setParticipants(updated);
       setIsAudioOn(false);
@@ -292,17 +370,23 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       }
     } catch {
       alert("Failed to mute participants.");
+    } finally {
+      isActionPendingRef.current = false;
     }
   }
 
   // 10. Host Remove Participant
   async function handleRemoveParticipant(participantId: number) {
+    if (isActionPendingRef.current) return;
     if (!confirm("Are you sure you want to remove this participant?")) return;
     try {
+      isActionPendingRef.current = true;
       await removeParticipant(meetingId, participantId);
       setParticipants((prev) => prev.filter((p) => p.id !== participantId));
     } catch {
       alert("Failed to remove participant.");
+    } finally {
+      isActionPendingRef.current = false;
     }
   }
 
@@ -314,31 +398,33 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     setTimeout(() => setCopiedLink(false), 2000);
   }
 
-  // 12. Trigger Reaction
+  // 12. Trigger Emoji Reaction
   function triggerReaction(emoji: string) {
     setActiveReaction(emoji);
     setIsReactionsOpen(false);
     setTimeout(() => setActiveReaction(null), 2500);
   }
 
-  // Formatting helpers
+  // Helpers
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const s = secs % 60;
     return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const isHost = currentParticipant?.role === "host" || meeting?.host_name === currentParticipant?.display_name || true;
+  const isHost =
+    currentParticipant?.role === "host" ||
+    meeting?.host_name === currentParticipant?.display_name ||
+    meeting?.host_name === "Ashwin Toppo";
+
   const filteredParticipants = participants.filter((p) =>
     p.display_name.toLowerCase().includes(participantSearch.toLowerCase())
   );
 
-  // Other participants excluding current user (if current user is in list)
   const remoteParticipants = participants.filter(
     (p) => !currentParticipant || p.id !== currentParticipant.id
   );
 
-  // Compute total tile count (local user + remote participants)
   const totalTiles = 1 + remoteParticipants.length;
   const gridClass =
     totalTiles === 1
@@ -374,6 +460,25 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           </p>
           <div className="zm-modal-actions">
             <Link href="/dashboard" className="zm-modal-btn danger" style={{ textDecoration: "none" }}>
+              Return to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isParticipantRemoved) {
+    return (
+      <div className="zm-room-page" style={{ alignItems: "center", justifyContent: "center" }}>
+        <div className="zm-modal-card" style={{ maxWidth: 460 }}>
+          <div style={{ fontSize: 40 }}>🚫</div>
+          <h2 className="zm-modal-title">Removed from Meeting</h2>
+          <p className="zm-modal-desc">
+            You were removed from this meeting by the host.
+          </p>
+          <div className="zm-modal-actions">
+            <Link href="/dashboard" className="zm-modal-btn secondary" style={{ textDecoration: "none" }}>
               Return to Dashboard
             </Link>
           </div>
@@ -528,7 +633,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   )}
                 </span>
                 <span>{currentParticipant?.display_name || "Ashwin Toppo"} (Me)</span>
-                <span className="zm-tile-badge-host">Host</span>
+                {isHost && <span className="zm-tile-badge-host">Host</span>}
               </div>
             </div>
 
@@ -613,7 +718,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   <div>
                     <div className="zm-participant-name">
                       {currentParticipant?.display_name || "Ashwin Toppo"}
-                      <span className="zm-participant-tags"> (Host, me)</span>
+                      <span className="zm-participant-tags"> ({isHost ? "Host, me" : "me"})</span>
                     </div>
                   </div>
                 </div>
