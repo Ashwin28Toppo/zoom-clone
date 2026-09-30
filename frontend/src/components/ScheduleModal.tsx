@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { createScheduledMeeting } from "@/lib/api";
 
 interface ScheduleModalProps {
@@ -18,11 +19,15 @@ export default function ScheduleModal({
   tomorrow.setDate(tomorrow.getDate() + 1);
   const defaultDate = tomorrow.toISOString().split("T")[0];
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("My Meeting");
   const [description, setDescription] = useState("");
+  const [showDescription, setShowDescription] = useState(false);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("10:00");
-  const [duration, setDuration] = useState("60");
+  const [duration, setDuration] = useState("45");
+  const [hostVideo, setHostVideo] = useState<"on" | "off">("off");
+  const [participantVideo, setParticipantVideo] = useState<"on" | "off">("off");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -32,7 +37,7 @@ export default function ScheduleModal({
     e.preventDefault();
 
     if (!title.trim()) {
-      setErrorMessage("Meeting topic/title is required.");
+      setErrorMessage("Meeting topic is required.");
       return;
     }
     if (!date || !time) {
@@ -44,7 +49,6 @@ export default function ScheduleModal({
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      // Combine date and time to ISO format
       const scheduledDateTime = new Date(`${date}T${time}:00`);
       if (isNaN(scheduledDateTime.getTime())) {
         setErrorMessage("Invalid date or time selected.");
@@ -60,8 +64,8 @@ export default function ScheduleModal({
         host_name: "Ashwin Toppo",
       });
 
-      // Clear form & trigger refresh
-      setTitle("");
+      // Clear & trigger refresh
+      setTitle("My Meeting");
       setDescription("");
       onMeetingScheduled();
       onClose();
@@ -74,8 +78,17 @@ export default function ScheduleModal({
 
   return (
     <div className="zm-modal-backdrop" onClick={onClose}>
-      <div className="zm-modal-card" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
-        <h2 className="zm-modal-title">Schedule Meeting</h2>
+      <div className="zm-modal-card" style={{ maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 className="zm-modal-title" style={{ margin: 0 }}>Schedule Meeting</h2>
+          <Link
+            href="/meeting/schedule"
+            onClick={onClose}
+            style={{ fontSize: 13, color: "#0e71eb", textDecoration: "none", fontWeight: 600 }}
+          >
+            Full Page ↗
+          </Link>
+        </div>
 
         <form onSubmit={handleSubmit}>
           {errorMessage && (
@@ -86,38 +99,42 @@ export default function ScheduleModal({
 
           <div className="zm-form-group">
             <label className="zm-form-label" htmlFor="input-sched-title">
-              Topic / Title *
+              Topic *
             </label>
             <input
               id="input-sched-title"
               type="text"
               className="zm-input"
-              placeholder="e.g. Q4 Strategy Review"
+              placeholder="Meeting Topic"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
               autoFocus
             />
-          </div>
-
-          <div className="zm-form-group">
-            <label className="zm-form-label" htmlFor="input-sched-desc">
-              Description (optional)
-            </label>
-            <textarea
-              id="input-sched-desc"
-              className="zm-input"
-              style={{ minHeight: 64, resize: "vertical" }}
-              placeholder="Meeting agenda, topics, or notes"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            {!showDescription ? (
+              <button
+                type="button"
+                className="zm-add-desc-btn"
+                style={{ marginTop: 6 }}
+                onClick={() => setShowDescription(true)}
+              >
+                + Add Description
+              </button>
+            ) : (
+              <textarea
+                className="zm-input"
+                style={{ minHeight: 60, marginTop: 8, resize: "vertical" }}
+                placeholder="Meeting agenda or notes..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div className="zm-form-group">
               <label className="zm-form-label" htmlFor="input-sched-date">
-                Date *
+                When *
               </label>
               <input
                 id="input-sched-date"
@@ -156,11 +173,69 @@ export default function ScheduleModal({
             >
               <option value="15">15 minutes</option>
               <option value="30">30 minutes</option>
+              <option value="40">40 minutes (Basic Plan Limit)</option>
               <option value="45">45 minutes</option>
               <option value="60">1 hour</option>
               <option value="90">1.5 hours</option>
               <option value="120">2 hours</option>
             </select>
+          </div>
+
+          <div className="zm-notice-box" style={{ margin: "12px 0 16px" }}>
+            <span className="zm-notice-icon">⚠</span>
+            <div style={{ fontSize: 12 }}>
+              <span>You can schedule meetings for up to 40 minutes each with your current Basic plan.</span>
+            </div>
+          </div>
+
+          {/* Video Settings */}
+          <div className="zm-form-group">
+            <label className="zm-form-label">Video</label>
+            <div style={{ display: "flex", gap: 24, fontSize: 13 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#6e7687" }}>Host:</span>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="modalHostVideo"
+                    checked={hostVideo === "on"}
+                    onChange={() => setHostVideo("on")}
+                  />
+                  <span>on</span>
+                </label>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="modalHostVideo"
+                    checked={hostVideo === "off"}
+                    onChange={() => setHostVideo("off")}
+                  />
+                  <span>off</span>
+                </label>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#6e7687" }}>Participant:</span>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="modalPartVideo"
+                    checked={participantVideo === "on"}
+                    onChange={() => setParticipantVideo("on")}
+                  />
+                  <span>on</span>
+                </label>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="modalPartVideo"
+                    checked={participantVideo === "off"}
+                    onChange={() => setParticipantVideo("off")}
+                  />
+                  <span>off</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="zm-modal-footer">
@@ -178,7 +253,7 @@ export default function ScheduleModal({
               className="zm-modal-btn primary"
               disabled={isSubmitting || !title.trim()}
             >
-              {isSubmitting ? "Scheduling..." : "Save Meeting"}
+              {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
         </form>

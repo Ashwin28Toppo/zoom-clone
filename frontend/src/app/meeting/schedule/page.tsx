@@ -1,0 +1,623 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import { createScheduledMeeting } from "@/lib/api";
+import "@/styles/dashboard.css";
+import "@/styles/schedule.css";
+
+export default function ScheduleMeetingPage() {
+  const router = useRouter();
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defaultDate = tomorrow.toISOString().split("T")[0];
+
+  // Core Form State
+  const [topic, setTopic] = useState("My Meeting");
+  const [showDescription, setShowDescription] = useState(false);
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(defaultDate);
+  const [timeHour, setTimeHour] = useState("1:00");
+  const [timeAmPm, setTimeAmPm] = useState("PM");
+  const [durationHours, setDurationHours] = useState("0");
+  const [durationMins, setDurationMins] = useState("40");
+  const [timezone, setTimezone] = useState("(GMT-7:00) Pacific Time (US and Canada)");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [invitees, setInvitees] = useState("");
+  const [meetingIdType, setMeetingIdType] = useState<"auto" | "pmi">("auto");
+  const [passcode, setPasscode] = useState("CB8xDM");
+  const [enablePasscode, setEnablePasscode] = useState(true);
+  const [notesTranscription, setNotesTranscription] = useState(true);
+  const [notesAudience, setNotesAudience] = useState<"all" | "org">("all");
+  const [meetingChat, setMeetingChat] = useState(true);
+  const [hostVideo, setHostVideo] = useState<"on" | "off">("off");
+  const [participantVideo, setParticipantVideo] = useState<"on" | "off">("off");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!topic.trim()) {
+      setErrorMessage("Meeting topic is required.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      // Parse time into 24-hr format
+      const [hStr, mStr] = timeHour.split(":");
+      let hour = parseInt(hStr, 10);
+      const minute = parseInt(mStr || "0", 10);
+      if (timeAmPm === "PM" && hour < 12) hour += 12;
+      if (timeAmPm === "AM" && hour === 12) hour = 0;
+
+      const [year, month, day] = date.split("-").map(Number);
+      const scheduledDateTime = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+      const totalDuration = parseInt(durationHours, 10) * 60 + parseInt(durationMins, 10);
+
+      await createScheduledMeeting({
+        title: topic.trim(),
+        description: description.trim() || undefined,
+        scheduled_at: scheduledDateTime.toISOString(),
+        duration: Math.max(15, totalDuration || 40),
+        host_name: "Ashwin Toppo",
+      });
+
+      // Redirect back to dashboard where upcoming meetings list updates
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setIsSubmitting(false);
+      const msg = err instanceof Error ? err.message : "Failed to schedule meeting";
+      setErrorMessage(msg);
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#ffffff" }}>
+      {/* Top Header matching reference screenshot */}
+      <Navbar variant="portal" />
+
+      <div className="zm-schedule-page">
+        {/* Left Sidebar matching Reference Screenshot */}
+        <aside className="zm-schedule-sidebar">
+          <div className="zm-sched-side-group">
+            <Link href="/dashboard" className="zm-sched-side-item">
+              <span>Home</span>
+            </Link>
+
+            <div className="zm-sched-side-heading">My Products</div>
+
+            <div className="zm-sched-side-item">
+              <span>AI</span>
+              <span className="zm-tag-new">New ↗</span>
+            </div>
+
+            <Link href="/dashboard" className="zm-sched-side-item active">
+              <span>Meetings</span>
+            </Link>
+
+            <div className="zm-sched-side-item">
+              <span>Recordings</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Summaries</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Hub</span>
+              <span className="zm-tag-new">New ↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Whiteboards</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Notes</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Clips</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Canvas</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Paper</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Sheets</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Slides</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Tasks</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item">
+              <span>Scheduler</span>
+              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
+            </div>
+
+            <div className="zm-sched-side-item" style={{ color: "#0e71eb" }}>
+              <span>Discover More Products</span>
+            </div>
+          </div>
+
+          <div className="zm-sched-side-group" style={{ borderTop: "1px solid #f0f2f5", paddingTop: 12 }}>
+            <div className="zm-sched-side-item">
+              <span>› My Account</span>
+            </div>
+            <div className="zm-sched-side-item">
+              <span>› Admin</span>
+            </div>
+            <div className="zm-sched-side-item">
+              <span>› Support</span>
+            </div>
+
+            <button className="zm-upgrade-pro-btn">
+              <span>★</span> Upgrade to Pro
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Schedule Form Content matching Reference Screenshots */}
+        <main className="zm-schedule-main">
+          <Link href="/dashboard" className="zm-back-link">
+            ‹ Back to Meetings
+          </Link>
+
+          <h1 className="zm-schedule-title">Schedule Meeting</h1>
+
+          {errorMessage && (
+            <div className="zm-error-banner" style={{ margin: "0 0 24px 0" }}>
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSave}>
+            {/* Topic Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label" htmlFor="sched-topic">
+                <span className="required">*</span> Topic
+              </label>
+              <div className="zm-form-row-content">
+                <input
+                  id="sched-topic"
+                  type="text"
+                  className="zm-sched-input"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  required
+                />
+                {!showDescription ? (
+                  <button
+                    type="button"
+                    className="zm-add-desc-btn"
+                    onClick={() => setShowDescription(true)}
+                  >
+                    + Add Description
+                  </button>
+                ) : (
+                  <textarea
+                    className="zm-sched-input"
+                    style={{ minHeight: 70, resize: "vertical" }}
+                    placeholder="Enter meeting agenda or notes..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* When Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label" htmlFor="sched-date">
+                When
+              </label>
+              <div className="zm-form-row-content">
+                <div className="zm-datetime-group">
+                  <input
+                    id="sched-date"
+                    type="date"
+                    className="zm-sched-select"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                  <select
+                    className="zm-sched-select"
+                    value={timeHour}
+                    onChange={(e) => setTimeHour(e.target.value)}
+                  >
+                    <option value="1:00">1:00</option>
+                    <option value="1:30">1:30</option>
+                    <option value="2:00">2:00</option>
+                    <option value="2:30">2:30</option>
+                    <option value="3:00">3:00</option>
+                    <option value="4:00">4:00</option>
+                    <option value="5:00">5:00</option>
+                    <option value="6:00">6:00</option>
+                    <option value="7:00">7:00</option>
+                    <option value="8:00">8:00</option>
+                    <option value="9:00">9:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                  </select>
+                  <select
+                    className="zm-sched-select"
+                    value={timeAmPm}
+                    onChange={(e) => setTimeAmPm(e.target.value)}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Duration Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Duration</label>
+              <div className="zm-form-row-content">
+                <div className="zm-datetime-group">
+                  <select
+                    className="zm-sched-select"
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(e.target.value)}
+                  >
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                  <span style={{ fontSize: 13, color: "#6e7687" }}>hr</span>
+
+                  <select
+                    className="zm-sched-select"
+                    value={durationMins}
+                    onChange={(e) => setDurationMins(e.target.value)}
+                  >
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="45">45</option>
+                    <option value="60">60</option>
+                  </select>
+                  <span style={{ fontSize: 13, color: "#6e7687" }}>min</span>
+                </div>
+
+                {/* Plan Notice Banner matching screenshot */}
+                <div className="zm-notice-box">
+                  <span className="zm-notice-icon">⚠</span>
+                  <div>
+                    <span>
+                      You can schedule meetings for up to 40 minutes each with your current Basic plan. Need more time?
+                    </span>
+                    <span className="zm-notice-link">Upgrade to Zoom Workplace Pro</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Time Zone Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label" htmlFor="sched-tz">
+                Time Zone
+              </label>
+              <div className="zm-form-row-content">
+                <select
+                  id="sched-tz"
+                  className="zm-sched-select"
+                  style={{ maxWidth: 420 }}
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                >
+                  <option value="(GMT-7:00) Pacific Time (US and Canada)">
+                    (GMT-7:00) Pacific Time (US and Canada)
+                  </option>
+                  <option value="(GMT-4:00) Eastern Time (US and Canada)">
+                    (GMT-4:00) Eastern Time (US and Canada)
+                  </option>
+                  <option value="(GMT+0:00) UTC">
+                    (GMT+0:00) Universal Coordinated Time
+                  </option>
+                  <option value="(GMT+5:30) India Standard Time">
+                    (GMT+5:30) India Standard Time
+                  </option>
+                </select>
+
+                <label className="zm-checkbox-option" style={{ marginTop: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                  />
+                  <span>Recurring meeting</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Invitees Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label" htmlFor="sched-invitees">
+                Invitees
+              </label>
+              <div className="zm-form-row-content">
+                <input
+                  id="sched-invitees"
+                  type="text"
+                  className="zm-sched-input"
+                  placeholder="Enter user names or email addresses"
+                  value={invitees}
+                  onChange={(e) => setInvitees(e.target.value)}
+                />
+                <div className="zm-notice-box">
+                  <span className="zm-notice-icon">⚠</span>
+                  <div>
+                    <span>Participants won&apos;t receive this meeting invite until your calendar is connected.</span>
+                    <span className="zm-notice-link">Connect calendar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Meeting ID Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Meeting ID</label>
+              <div className="zm-form-row-content" style={{ gap: 8 }}>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="meetingIdOption"
+                    checked={meetingIdType === "auto"}
+                    onChange={() => setMeetingIdType("auto")}
+                  />
+                  <span>Generate Automatically</span>
+                </label>
+                <label className="zm-radio-option">
+                  <input
+                    type="radio"
+                    name="meetingIdOption"
+                    checked={meetingIdType === "pmi"}
+                    onChange={() => setMeetingIdType("pmi")}
+                  />
+                  <span>Personal Meeting ID 916 333 2813</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Template Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label" htmlFor="sched-template">
+                Template
+              </label>
+              <div className="zm-form-row-content">
+                <select id="sched-template" className="zm-sched-select" style={{ maxWidth: 320 }}>
+                  <option>Select a template</option>
+                  <option>Standard Meeting</option>
+                  <option>1:1 Catch-up</option>
+                  <option>Sprint Planning</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Whiteboard Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Whiteboard ⓘ</label>
+              <div className="zm-form-row-content">
+                <button type="button" className="zm-pill-action">
+                  <span>+</span> Add Whiteboard
+                </button>
+              </div>
+            </div>
+
+            {/* Docs Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Docs</label>
+              <div className="zm-form-row-content">
+                <button type="button" className="zm-pill-action">
+                  <span>+</span> Add Docs
+                </button>
+              </div>
+            </div>
+
+            {/* Security Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Security</label>
+              <div className="zm-form-row-content">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <label className="zm-checkbox-option">
+                    <input
+                      type="checkbox"
+                      checked={enablePasscode}
+                      onChange={(e) => setEnablePasscode(e.target.checked)}
+                    />
+                    <span>Passcode</span>
+                  </label>
+                  {enablePasscode && (
+                    <input
+                      type="text"
+                      className="zm-sched-input"
+                      style={{ maxWidth: 160 }}
+                      value={passcode}
+                      onChange={(e) => setPasscode(e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Workflow Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Workflow</label>
+              <div className="zm-form-row-content">
+                <span className="zm-notice-link" style={{ margin: 0 }}>
+                  Attach workflow to this meeting
+                </span>
+              </div>
+            </div>
+
+            {/* My Notes Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">My Notes</label>
+              <div className="zm-form-row-content">
+                <label className="zm-checkbox-option">
+                  <input
+                    type="checkbox"
+                    checked={notesTranscription}
+                    onChange={(e) => setNotesTranscription(e.target.checked)}
+                  />
+                  <span>Allow participants to transcribe meeting with My Notes</span>
+                </label>
+                {notesTranscription && (
+                  <div style={{ paddingLeft: 24, display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="notesAudience"
+                        checked={notesAudience === "org"}
+                        onChange={() => setNotesAudience("org")}
+                      />
+                      <span>Only participants in your organization</span>
+                    </label>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="notesAudience"
+                        checked={notesAudience === "all"}
+                        onChange={() => setNotesAudience("all")}
+                      />
+                      <span>All participants</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Meeting Chat Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Meeting chat</label>
+              <div className="zm-form-row-content">
+                <label className="zm-checkbox-option">
+                  <input
+                    type="checkbox"
+                    checked={meetingChat}
+                    onChange={(e) => setMeetingChat(e.target.checked)}
+                  />
+                  <span>Allow users to access meeting chats before and after the meeting</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Video Settings Field */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Video</label>
+              <div className="zm-form-row-content">
+                <div className="zm-video-settings-grid">
+                  <span>Host</span>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="hostVideo"
+                        checked={hostVideo === "on"}
+                        onChange={() => setHostVideo("on")}
+                      />
+                      <span>on</span>
+                    </label>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="hostVideo"
+                        checked={hostVideo === "off"}
+                        onChange={() => setHostVideo("off")}
+                      />
+                      <span>off</span>
+                    </label>
+                  </div>
+
+                  <span>Participant</span>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="participantVideo"
+                        checked={participantVideo === "on"}
+                        onChange={() => setParticipantVideo("on")}
+                      />
+                      <span>on</span>
+                    </label>
+                    <label className="zm-radio-option">
+                      <input
+                        type="radio"
+                        name="participantVideo"
+                        checked={participantVideo === "off"}
+                        onChange={() => setParticipantVideo("off")}
+                      />
+                      <span>off</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Options Link */}
+            <div className="zm-form-row">
+              <label className="zm-form-row-label">Options</label>
+              <div className="zm-form-row-content">
+                <span className="zm-notice-link" style={{ margin: 0 }}>
+                  Show
+                </span>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="zm-sched-footer">
+              <button
+                id="btn-schedule-save"
+                type="submit"
+                className="zm-sched-save-btn"
+                disabled={isSubmitting || !topic.trim()}
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </button>
+              <Link href="/dashboard" className="zm-sched-cancel-btn">
+                Cancel
+              </Link>
+            </div>
+          </form>
+        </main>
+      </div>
+
+      {/* Floating Chat Widget Icon matching screenshot */}
+      <div className="zm-floating-chat" title="Zoom Support Chat">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      </div>
+    </div>
+  );
+}
