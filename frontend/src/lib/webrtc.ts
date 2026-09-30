@@ -12,13 +12,15 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 interface SignalMessage {
   sender_id: number;
   target_id?: number;
-  signal_type: "offer" | "answer" | "ice-candidate" | "peer-joined" | "peer-left";
+  signal_type: "offer" | "answer" | "ice-candidate" | "peer-joined" | "peer-left" | "ready";
   data: unknown;
 }
 
@@ -32,6 +34,7 @@ export function useWebRTC(
   const peerConnections = useRef<Map<number, RTCPeerConnection>>(new Map());
   const wsRef = useRef<WebSocket | null>(null);
   const pendingCandidates = useRef<Map<number, RTCIceCandidateInit[]>>(new Map());
+  const makingOffer = useRef<Map<number, boolean>>(new Map());
 
   // Helper to send signal via WS or REST fallback
   const sendSignal = useCallback(
@@ -89,17 +92,32 @@ export function useWebRTC(
       // ICE Candidate handler
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          sendSignal(peerId, "ice-candidate", event.candidate);
+          sendSignal(peerId, "ice-candidate", event.candidate.toJSON());
         }
       };
 
-      // Remote Track handler
+      // Remote Track handler (supports both event.streams and event.track fallback)
       pc.ontrack = (event) => {
+        let stream: MediaStream | null = null;
         if (event.streams && event.streams[0]) {
-          const stream = event.streams[0];
+          stream = event.streams[0];
+        } else if (event.track) {
+          stream = new MediaStream([event.track]);
+        }
+
+        if (stream) {
+          const finalStream = stream;
           setRemoteStreams((prev) => {
             const next = new Map(prev);
-            next.set(peerId, stream);
+            const existing = next.get(peerId);
+            if (existing) {
+              if (event.track && !existing.getTracks().some((t) => t.id === event.track.id)) {
+                existing.addTrack(event.track);
+              }
+              next.set(peerId, existing);
+            } else {
+              next.set(peerId, finalStream);
+            }
             return next;
           });
         }
@@ -107,7 +125,11 @@ export function useWebRTC(
 
       // Connection State Change
       pc.onconnectionstatechange = () => {
-        if (pc?.connectionState === "disconnected" || pc?.connectionState === "failed" || pc?.connectionState === "closed") {
+        if (
+          pc?.connectionState === "disconnected" ||
+          pc?.connectionState === "failed" ||
+          pc?.connectionState === "closed"
+        ) {
           setRemoteStreams((prev) => {
             const next = new Map(prev);
             next.delete(peerId);
@@ -126,34 +148,67 @@ export function useWebRTC(
     async (peerId: number) => {
       try {
         const pc = getOrCreatePeerConnection(peerId);
+        makingOffer.current.set(peerId, true);
         const offer = await pc.createOffer({
           offerToReceiveAudio: true,
           offerToReceiveVideo: true,
         });
+        if (pc.signalingState !== "stable") return;
         await pc.setLocalDescription(offer);
         await sendSignal(peerId, "offer", offer);
       } catch {
         // offer error
+      } finally {
+        makingOffer.current.set(peerId, false);
       }
     },
     [getOrCreatePeerConnection, sendSignal]
   );
 
-  // Handle incoming signals
+  // Handle incoming signals with polite peer collision resolution
   const handleSignal = useCallback(
     async (signal: SignalMessage) => {
       const peerId = signal.sender_id;
       if (peerId === currentParticipantId) return;
 
+      const isPolite = (currentParticipantId || 0) > peerId;
+
       try {
-        if (signal.signal_type === "peer-joined") {
-          // If we have a lower ID or are host, initiate the offer
-          if (!currentParticipantId || currentParticipantId < peerId) {
+        if (signal.signal_type === "peer-joined" || signal.signal_type === "ready") {
+          // Initiate offer if we are the lower ID (impolite peer)
+          if (!isPolite) {
             await initiateOffer(peerId);
           }
         } else if (signal.signal_type === "offer") {
           const pc = getOrCreatePeerConnection(peerId);
-          await pc.setRemoteDescription(new RTCSessionDescription(signal.data as RTCSessionDescriptionInit));
+          const isOfferCollision =
+            makingOffer.current.get(peerId) || pc.signalingState !== "stable";
+
+          if (isOfferCollision && !isPolite) {
+            return; // Impolite peer ignores colliding offer
+          }
+
+          if (isOfferCollision && isPolite) {
+            await pc.setLocalDescription({ type: "rollback" });
+          }
+
+          // Attach local tracks if not attached
+          if (localStream) {
+            const senders = pc.getSenders();
+            localStream.getTracks().forEach((track) => {
+              if (!senders.some((s) => s.track?.id === track.id)) {
+                try {
+                  pc.addTrack(track, localStream);
+                } catch {
+                  // ignore
+                }
+              }
+            });
+          }
+
+          await pc.setRemoteDescription(
+            new RTCSessionDescription(signal.data as RTCSessionDescriptionInit)
+          );
 
           // Process queued candidates
           const queued = pendingCandidates.current.get(peerId) || [];
@@ -172,7 +227,9 @@ export function useWebRTC(
         } else if (signal.signal_type === "answer") {
           const pc = peerConnections.current.get(peerId);
           if (pc && pc.signalingState === "have-local-offer") {
-            await pc.setRemoteDescription(new RTCSessionDescription(signal.data as RTCSessionDescriptionInit));
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(signal.data as RTCSessionDescriptionInit)
+            );
 
             // Process queued candidates
             const queued = pendingCandidates.current.get(peerId) || [];
@@ -194,7 +251,6 @@ export function useWebRTC(
               // candidate error
             }
           } else {
-            // Queue candidate until remote description is set
             if (!pendingCandidates.current.has(peerId)) {
               pendingCandidates.current.set(peerId, []);
             }
@@ -213,10 +269,10 @@ export function useWebRTC(
           });
         }
       } catch {
-        // signal processing error
+        // error handling
       }
     },
-    [currentParticipantId, getOrCreatePeerConnection, initiateOffer, sendSignal]
+    [currentParticipantId, getOrCreatePeerConnection, initiateOffer, sendSignal, localStream]
   );
 
   // Sync local tracks with all existing peer connections when localStream changes
@@ -247,12 +303,19 @@ export function useWebRTC(
     if (!currentParticipantId) return;
 
     let isMounted = true;
-    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + `/api/meetings/${meetingId}/ws/${currentParticipantId}`;
+    const wsUrl =
+      API_BASE_URL.replace(/^http/, "ws") +
+      `/api/meetings/${meetingId}/ws/${currentParticipantId}`;
 
     function connectWebSocket() {
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
+
+        ws.onopen = () => {
+          // Announce ready
+          sendSignal(undefined, "ready", { participant_id: currentParticipantId });
+        };
 
         ws.onmessage = (event) => {
           try {
@@ -265,7 +328,6 @@ export function useWebRTC(
 
         ws.onclose = () => {
           if (isMounted) {
-            // Retry connecting after 3s
             setTimeout(connectWebSocket, 3000);
           }
         };
@@ -276,7 +338,7 @@ export function useWebRTC(
 
     connectWebSocket();
 
-    // REST polling fallback (every 2s)
+    // REST polling fallback (every 1.5s)
     const interval = setInterval(async () => {
       if (!isMounted) return;
       try {
@@ -294,7 +356,7 @@ export function useWebRTC(
       } catch {
         // polling error
       }
-    }, 2000);
+    }, 1500);
 
     return () => {
       isMounted = false;
@@ -304,17 +366,16 @@ export function useWebRTC(
         wsRef.current = null;
       }
     };
-  }, [meetingId, currentParticipantId, handleSignal]);
+  }, [meetingId, currentParticipantId, handleSignal, sendSignal]);
 
-  // Automatically initiate offers for any new remote participants in room
+  // Automatically initiate offers for any remote participants
   useEffect(() => {
     if (!currentParticipantId) return;
 
     remoteParticipants.forEach((p) => {
-      if (!peerConnections.current.has(p.id)) {
-        if (currentParticipantId < p.id) {
-          initiateOffer(p.id);
-        }
+      const isPolite = currentParticipantId > p.id;
+      if (!isPolite && !peerConnections.current.has(p.id)) {
+        initiateOffer(p.id);
       }
     });
   }, [remoteParticipants, currentParticipantId, initiateOffer]);

@@ -38,38 +38,68 @@ function RemoteParticipantTile({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const attachVideo = useCallback(
+    (el: HTMLVideoElement | null) => {
+      videoRef.current = el;
+      if (el && stream) {
+        if (el.srcObject !== stream) {
+          el.srcObject = stream;
+        }
+        el.play().catch(() => {});
+      }
+    },
+    [stream]
+  );
+
+  const attachAudio = useCallback(
+    (el: HTMLAudioElement | null) => {
+      audioRef.current = el;
+      if (el && stream) {
+        if (el.srcObject !== stream) {
+          el.srcObject = stream;
+        }
+        el.play().catch(() => {});
+      }
+    },
+    [stream]
+  );
+
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      }
+      videoRef.current.play().catch(() => {});
+    }
+    if (audioRef.current && stream) {
+      if (audioRef.current.srcObject !== stream) {
+        audioRef.current.srcObject = stream;
+      }
+      audioRef.current.play().catch(() => {});
     }
   }, [stream, participant.is_video_on]);
 
-  useEffect(() => {
-    if (audioRef.current && stream) {
-      audioRef.current.srcObject = stream;
-      audioRef.current.play().catch(() => {});
-    }
-  }, [stream]);
-
   const hasLiveVideo = Boolean(
     stream &&
-      stream.getVideoTracks().length > 0 &&
+      (stream.getVideoTracks().length > 0) &&
       participant.is_video_on
   );
 
   return (
     <div className="zm-video-tile">
       {/* Remote Audio output to hear their voice */}
-      {stream && <audio ref={audioRef} autoPlay playsInline />}
+      <audio ref={attachAudio} autoPlay playsInline />
 
-      {hasLiveVideo ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="zm-video-element"
-        />
-      ) : (
+      {/* Remote Video output */}
+      <video
+        ref={attachVideo}
+        autoPlay
+        playsInline
+        className="zm-video-element"
+        style={{ display: hasLiveVideo ? "block" : "none" }}
+      />
+
+      {!hasLiveVideo && (
         <div className="zm-tile-avatar-view">
           <div className={`zm-tile-avatar alt-${(index % 4) + 1}`}>
             {participant.display_name.charAt(0).toUpperCase()}
