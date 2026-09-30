@@ -135,3 +135,60 @@ def end_meeting(meeting_id: str, db: Session = Depends(get_db)):
 def get_participants(meeting_id: str, db: Session = Depends(get_db)):
     """Get all active participants in a meeting."""
     return meeting_service.get_participants(db, meeting_id)
+
+
+# WebRTC Signaling Routes
+from fastapi import WebSocket, WebSocketDisconnect
+from ..services.signaling_service import signaling_manager
+from pydantic import BaseModel
+from typing import Any, Optional
+
+class SignalPayload(BaseModel):
+    sender_id: int
+    target_id: Optional[int] = None
+    signal_type: str
+    data: Any
+
+@router.websocket("/{meeting_id}/ws/{participant_id}")
+async def websocket_signaling(websocket: WebSocket, meeting_id: str, participant_id: int):
+    """WebSocket endpoint for ultra-low-latency WebRTC peer signaling."""
+    await signaling_manager.connect(meeting_id, participant_id, websocket)
+    try:
+        while True:
+            text = await websocket.receive_text()
+            import json
+            payload = json.loads(text)
+            target_id = payload.get("target_id")
+            signal_type = payload.get("signal_type")
+            data = payload.get("data")
+            if target_id is not None:
+                await signaling_manager.send_to_peer(meeting_id, participant_id, target_id, signal_type, data)
+            else:
+                await signaling_manager.broadcast(meeting_id, participant_id, signal_type, data)
+    except WebSocketDisconnect:
+        signaling_manager.disconnect(meeting_id, participant_id)
+        await signaling_manager.broadcast(meeting_id, participant_id, "peer-left", {"participant_id": participant_id})
+    except Exception:
+        signaling_manager.disconnect(meeting_id, participant_id)
+
+
+@router.post("/{meeting_id}/signal")
+async def post_signal(meeting_id: str, payload: SignalPayload):
+    """REST fallback endpoint to send WebRTC signals."""
+    if payload.target_id is not None:
+        await signaling_manager.send_to_peer(
+            meeting_id, payload.sender_id, payload.target_id, payload.signal_type, payload.data
+        )
+    else:
+        await signaling_manager.broadcast(
+            meeting_id, payload.sender_id, payload.signal_type, payload.data
+        )
+    return {"status": "sent"}
+
+
+@router.get("/{meeting_id}/signals")
+def get_signals(meeting_id: str, participant_id: int = Query(...)):
+    """REST fallback endpoint to fetch pending WebRTC signals."""
+    signals = signaling_manager.get_and_clear_queue(meeting_id, participant_id)
+    return {"signals": signals}
+

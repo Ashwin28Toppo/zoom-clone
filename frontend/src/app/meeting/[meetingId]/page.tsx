@@ -16,8 +16,95 @@ import {
   Meeting,
   Participant,
 } from "@/lib/api";
+import { useWebRTC } from "@/lib/webrtc";
 import "@/styles/dashboard.css";
 import "@/styles/meeting.css";
+
+interface RemoteParticipantTileProps {
+  participant: Participant;
+  stream?: MediaStream;
+  index: number;
+  isHost: boolean;
+  onRemove: (id: number) => void;
+}
+
+function RemoteParticipantTile({
+  participant,
+  stream,
+  index,
+  isHost,
+  onRemove,
+}: RemoteParticipantTileProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, participant.is_video_on]);
+
+  useEffect(() => {
+    if (audioRef.current && stream) {
+      audioRef.current.srcObject = stream;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [stream]);
+
+  const hasLiveVideo = Boolean(
+    stream &&
+      stream.getVideoTracks().length > 0 &&
+      participant.is_video_on
+  );
+
+  return (
+    <div className="zm-video-tile">
+      {/* Remote Audio output to hear their voice */}
+      {stream && <audio ref={audioRef} autoPlay playsInline />}
+
+      {hasLiveVideo ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className="zm-video-element"
+        />
+      ) : (
+        <div className="zm-tile-avatar-view">
+          <div className={`zm-tile-avatar alt-${(index % 4) + 1}`}>
+            {participant.display_name.charAt(0).toUpperCase()}
+          </div>
+        </div>
+      )}
+
+      <div className="zm-tile-nametag">
+        {!participant.is_audio_on ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#30d158">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          </svg>
+        )}
+        <span>{participant.display_name}</span>
+      </div>
+
+      {isHost && (
+        <div className="zm-tile-hover-actions">
+          <button
+            type="button"
+            className="zm-tile-action-btn danger"
+            onClick={() => onRemove(participant.id)}
+          >
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface MeetingRoomProps {
   params: Promise<{ meetingId: string }>;
@@ -42,6 +129,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [mediaPermissionDenied, setMediaPermissionDenied] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
@@ -71,6 +159,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         }
       });
       localStreamRef.current = null;
+      setLocalStream(null);
     }
   }, []);
 
@@ -224,6 +313,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           }
 
           localStreamRef.current = stream;
+          setLocalStream(stream);
         }
 
         if (videoRef.current && localStreamRef.current) {
@@ -416,6 +506,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   const remoteParticipants = participants.filter(
     (p) => !currentParticipant || p.id !== currentParticipant.id
+  );
+
+  const { remoteStreams } = useWebRTC(
+    meetingId,
+    currentParticipant?.id,
+    localStream,
+    remoteParticipants
   );
 
   const totalTiles = 1 + remoteParticipants.length;
@@ -659,38 +756,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
               {/* Remote Participants */}
               {remoteParticipants.map((p, idx) => (
-                <div key={p.id} className="zm-video-tile">
-                  <div className="zm-tile-avatar-view">
-                    <div className={`zm-tile-avatar alt-${(idx % 4) + 1}`}>
-                      {p.display_name.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="zm-tile-nametag">
-                    {!p.is_audio_on ? (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
-                      </svg>
-                    ) : (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#30d158">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      </svg>
-                    )}
-                    <span>{p.display_name}</span>
-                  </div>
-
-                  {isHost && (
-                    <div className="zm-tile-hover-actions">
-                      <button
-                        type="button"
-                        className="zm-tile-action-btn danger"
-                        onClick={() => handleRemoveParticipant(p.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <RemoteParticipantTile
+                  key={p.id}
+                  participant={p}
+                  stream={remoteStreams.get(p.id)}
+                  index={idx}
+                  isHost={isHost}
+                  onRemove={handleRemoveParticipant}
+                />
               ))}
             </div>
           </div>
