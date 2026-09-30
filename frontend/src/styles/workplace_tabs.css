@@ -1,0 +1,594 @@
+/* Zoom Workplace Chat, Meetings, Contacts Styles matching Reference Images */
+
+.zm-workplace-container {
+  display: flex;
+  height: calc(100vh - var(--zm-header-height));
+  background-color: #ffffff;
+  color: #111827;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---------------- Sub-Sidebar (Middle Panel) ---------------- */
+.zm-sub-sidebar {
+  width: 290px;
+  background-color: #f7f9fa;
+  border-right: 1px solid #e5e8ec;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* Chat Sub-Sidebar */
+.zm-chat-sub-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zm-chat-title-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zm-chat-sub-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zm-sub-icon-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zm-sub-icon-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.zm-new-chat-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #0e71eb;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  transition: background-color 0.15s;
+}
+
+.zm-new-chat-btn:hover {
+  background-color: #005ce6;
+}
+
+.zm-chat-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+
+.zm-filter-pill {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #d0d5dd;
+  background-color: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zm-filter-pill.active {
+  background-color: #e8f2ff;
+  border-color: #b9d9ff;
+  color: #0e71eb;
+}
+
+.zm-chat-accordion-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 4px;
+}
+
+.zm-chat-accordion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.zm-chat-accordion-item:hover {
+  background-color: #e9eef5;
+  color: #0f172a;
+}
+
+/* ---------------- Meetings Sub-Sidebar (Image 2) ---------------- */
+.zm-meetings-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e8ec;
+}
+
+.zm-meetings-sub-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  flex: 1;
+  text-align: center;
+  margin-right: 18px;
+}
+
+.zm-meetings-cards-list {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.zm-pmi-card {
+  background-color: #0e71eb;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(14, 113, 235, 0.25);
+}
+
+.zm-pmi-card-id {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.zm-pmi-card-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.zm-meetings-divider-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 8px;
+  padding-left: 4px;
+}
+
+.zm-sched-meeting-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e8ec;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.zm-sched-meeting-card:hover {
+  border-color: #0e71eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.zm-sched-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.zm-sched-card-time {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.zm-sched-card-meta {
+  font-size: 11px;
+  color: #8c93a0;
+  margin-top: 2px;
+}
+
+.zm-meetings-sub-footer {
+  padding: 14px 16px;
+  border-top: 1px solid #e5e8ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zm-add-cal-btn {
+  background: none;
+  border: none;
+  color: #0e71eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------------- Contacts Sub-Sidebar (Image 3) ---------------- */
+.zm-contacts-search-bar {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e5e8ec;
+}
+
+.zm-contacts-search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.zm-contacts-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  width: 100%;
+}
+
+.zm-contacts-plus-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid #d0d5dd;
+  background-color: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.zm-contacts-loading-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  gap: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.zm-blue-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0e71eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------- Main Content Workspace ---------------- */
+.zm-workplace-main {
+  flex: 1;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto;
+}
+
+/* Chat Main View */
+.zm-chat-main-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid #e5e8ec;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zm-chat-main-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.zm-chat-input-row {
+  padding: 10px 24px;
+  border-bottom: 1px solid #f1f3f5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.zm-chat-input-row label {
+  color: #111827;
+  font-weight: 700;
+  min-width: 24px;
+}
+
+.zm-chat-seamless-input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  color: #111827;
+}
+
+.zm-chat-seamless-input::placeholder {
+  color: #94a3b8;
+}
+
+.zm-chat-center-banner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 16px;
+}
+
+.zm-chat-waving-hand {
+  width: 90px;
+  height: 90px;
+}
+
+.zm-chat-banner-text {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.zm-chat-compose-container {
+  padding: 16px 24px 24px;
+}
+
+.zm-chat-compose-box {
+  border: 1px solid #d0d5dd;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.zm-chat-compose-textarea {
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 14px;
+  color: #111827;
+  font-family: inherit;
+  width: 100%;
+  height: 48px;
+}
+
+.zm-chat-compose-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zm-chat-compose-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.zm-compose-tool-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.zm-compose-tool-btn:hover {
+  color: #0e71eb;
+  background-color: #f1f5f9;
+}
+
+.zm-chat-send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-chat-send-btn.active {
+  background-color: #0e71eb;
+  color: #ffffff;
+}
+
+/* Meetings Main View (Image 2) */
+.zm-meetings-detail-panel {
+  padding: 36px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 800px;
+}
+
+.zm-detail-main-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.zm-detail-meeting-id {
+  font-size: 15px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.zm-detail-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.zm-detail-btn-start {
+  background-color: #0e71eb;
+  color: #ffffff;
+  border: none;
+  padding: 9px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.zm-detail-btn-start:hover {
+  background-color: #005ce6;
+}
+
+.zm-detail-btn-secondary {
+  background-color: #ffffff;
+  color: #111827;
+  border: 1px solid #d0d5dd;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s;
+}
+
+.zm-detail-btn-secondary:hover {
+  background-color: #f7f9fa;
+}
+
+.zm-detail-link {
+  color: #0e71eb;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  margin-top: 14px;
+  display: inline-block;
+}
+
+.zm-detail-link:hover {
+  text-decoration: underline;
+}
+
+/* Contacts Main View (Image 3) */
+.zm-contacts-center-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  gap: 20px;
+  text-align: center;
+}
+
+.zm-contacts-book-card {
+  width: 120px;
+  height: 140px;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.zm-contacts-tabs {
+  position: absolute;
+  right: -6px;
+  top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zm-book-tab {
+  width: 8px;
+  height: 14px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.zm-book-tab.red { background-color: #ef4444; }
+.zm-book-tab.yellow { background-color: #f59e0b; }
+.zm-book-tab.green { background-color: #10b981; }
+.zm-book-tab.blue { background-color: #0e71eb; }
+
+.zm-contacts-placeholder-text {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}

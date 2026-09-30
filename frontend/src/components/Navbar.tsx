@@ -26,12 +26,6 @@ export default function Navbar({ variant = "workplace", onOpenJoin }: NavbarProp
         </div>
 
         <div className="zm-header-right" style={{ gap: 20 }}>
-          <Link
-            href="/meeting/schedule"
-            style={{ fontSize: 14, fontWeight: 600, color: "#0e71eb", textDecoration: "none" }}
-          >
-            Schedule
-          </Link>
           <button
             onClick={onOpenJoin}
             style={{ background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "#232333", cursor: "pointer" }}
@@ -98,13 +92,6 @@ export default function Navbar({ variant = "workplace", onOpenJoin }: NavbarProp
       </div>
 
       <div className="zm-header-right">
-        <Link
-          href="/meeting/schedule"
-          className="zm-header-link"
-          style={{ fontWeight: 600, color: "#0e71eb" }}
-        >
-          Schedule
-        </Link>
         <span className="zm-header-link">Admin Center</span>
         <button className="zm-pill-btn">Download</button>
         <button className="zm-pill-btn primary">Upgrade</button>

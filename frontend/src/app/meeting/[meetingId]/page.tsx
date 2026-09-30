@@ -3,6 +3,7 @@
 import React, { use, useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import {
   getMeetingById,
   getParticipants,
@@ -15,6 +16,7 @@ import {
   Meeting,
   Participant,
 } from "@/lib/api";
+import "@/styles/dashboard.css";
 import "@/styles/meeting.css";
 
 interface MeetingRoomProps {
@@ -52,16 +54,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isReactionsOpen, setIsReactionsOpen] = useState(false);
 
-  // Timer State (elapsed meeting seconds)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Ref Locks for concurrency & polling deduplication
+  // Concurrency & Polling locks
   const isPollingRef = useRef(false);
   const isLeavingRef = useRef(false);
   const isEndingRef = useRef(false);
   const isActionPendingRef = useRef(false);
 
-  // Stop all local media tracks helper
+  // Stop media helper
   const stopLocalMedia = useCallback(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
@@ -75,7 +74,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }, []);
 
-  // 1. Initialize meeting & participant data (with auto-join fallback on direct URL navigation)
+  // 1. Initialize meeting & participant data
   useEffect(() => {
     let isMounted = true;
 
@@ -95,7 +94,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
         setMeeting(meetingData);
 
-        // Fetch active participants list
+        // Fetch active participants
         const participantsData = await getParticipants(meetingId);
         if (!isMounted) return;
         setParticipants(participantsData);
@@ -113,7 +112,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           }
         }
 
-        // If no stored participant (e.g. direct URL visit or refresh), auto-join as Ashwin Toppo
+        // Direct URL visit fallback: auto-join
         if (!activeParticipant) {
           try {
             activeParticipant = await joinMeeting(meetingId, {
@@ -125,7 +124,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               sessionStorage.setItem(`zoom_participant_${meetingId}`, JSON.stringify(activeParticipant));
             }
           } catch {
-            // If join fails, continue with fallback
+            // fallback
           }
         }
 
@@ -152,7 +151,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     };
   }, [meetingId]);
 
-  // 2. Safe, deduplicated Polling for Participants & Meeting Status (every 3s)
+  // 2. Safe polling loop (every 3s)
   useEffect(() => {
     if (isMeetingEnded || isParticipantRemoved || errorMessage) return;
 
@@ -175,7 +174,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         setMeeting(updatedMeeting);
         setParticipants(updatedParticipants);
 
-        // Check if current participant was removed by host
+        // Check if kicked
         if (currentParticipant?.id) {
           const stillActive = updatedParticipants.find((p) => p.id === currentParticipant.id);
           if (!stillActive) {
@@ -187,7 +186,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             return;
           }
 
-          // Check if remote mute was applied to this participant (e.g. host Mute All)
+          // Check remote mute
           if (!stillActive.is_audio_on && isAudioOn) {
             setIsAudioOn(false);
             if (localStreamRef.current) {
@@ -198,7 +197,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           }
         }
       } catch {
-        // Retain current state gracefully on transient network jitter
+        // network jitter
       } finally {
         isPollingRef.current = false;
       }
@@ -207,15 +206,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     return () => clearInterval(interval);
   }, [meetingId, isMeetingEnded, isParticipantRemoved, errorMessage, currentParticipant, isAudioOn, stopLocalMedia]);
 
-  // 3. Meeting Timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // 4. Manage local camera & microphone media stream
+  // 3. Local Camera/Mic Stream
   useEffect(() => {
     let active = true;
 
@@ -237,7 +228,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           videoRef.current.srcObject = stream;
         }
 
-        // Apply audio & video enabled states to hardware tracks
         stream.getAudioTracks().forEach((t) => {
           t.enabled = isAudioOn;
         });
@@ -256,7 +246,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
     startMedia();
 
-    // Register beforeunload cleanup so camera/mic lights turn off immediately
     const handleUnload = () => {
       stopLocalMedia();
     };
@@ -272,7 +261,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     };
   }, [isAudioOn, isVideoOn, stopLocalMedia]);
 
-  // 5. Toggle Audio (Mute / Unmute)
+  // 4. Toggle Audio
   async function handleToggleAudio() {
     const nextState = !isAudioOn;
     setIsAudioOn(nextState);
@@ -289,12 +278,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           is_audio_on: nextState,
         });
       } catch {
-        // Continue gracefully
+        // ignore
       }
     }
   }
 
-  // 6. Toggle Video (Start / Stop Video)
+  // 5. Toggle Video
   async function handleToggleVideo() {
     const nextState = !isVideoOn;
     setIsVideoOn(nextState);
@@ -311,12 +300,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           is_video_on: nextState,
         });
       } catch {
-        // Continue gracefully
+        // ignore
       }
     }
   }
 
-  // 7. Leave Meeting (Deduplicated)
+  // 6. Leave Meeting
   async function handleLeaveMeeting() {
     if (isLeavingRef.current) return;
     try {
@@ -325,7 +314,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         await leaveMeeting(meetingId, currentParticipant.id);
       }
     } catch {
-      // Continue navigation even if leave API fails
+      // ignore
     } finally {
       stopLocalMedia();
       if (typeof window !== "undefined") {
@@ -337,7 +326,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
-  // 8. End Meeting for All (Host action - Deduplicated)
+  // 7. End Meeting for All
   async function handleEndMeeting() {
     if (isEndingRef.current) return;
     try {
@@ -345,7 +334,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       await endMeeting(meetingId);
       setIsMeetingEnded(true);
     } catch {
-      // Handle error
+      // ignore
     } finally {
       stopLocalMedia();
       setIsEndModalOpen(false);
@@ -355,7 +344,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
-  // 9. Host Mute All
+  // 8. Host Mute All
   async function handleMuteAll() {
     if (isActionPendingRef.current) return;
     try {
@@ -375,7 +364,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
-  // 10. Host Remove Participant
+  // 9. Host Remove Participant
   async function handleRemoveParticipant(participantId: number) {
     if (isActionPendingRef.current) return;
     if (!confirm("Are you sure you want to remove this participant?")) return;
@@ -390,7 +379,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
-  // 11. Copy Meeting Invite Link
+  // 10. Copy Invite Link
   function copyInviteLink() {
     const inviteUrl = meeting?.invite_link || (typeof window !== "undefined" ? window.location.href : "");
     navigator.clipboard.writeText(inviteUrl);
@@ -398,19 +387,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     setTimeout(() => setCopiedLink(false), 2000);
   }
 
-  // 12. Trigger Emoji Reaction
+  // 11. Trigger Reaction
   function triggerReaction(emoji: string) {
     setActiveReaction(emoji);
     setIsReactionsOpen(false);
     setTimeout(() => setActiveReaction(null), 2500);
   }
-
-  // Helpers
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
 
   const isHost =
     currentParticipant?.role === "host" ||
@@ -433,17 +415,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       ? "zm-grid-2"
       : totalTiles <= 4
       ? "zm-grid-4"
-      : totalTiles <= 6
-      ? "zm-grid-6"
       : "zm-grid-multi";
 
   if (isLoading) {
     return (
-      <div className="zm-room-page" style={{ alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
+      <div className="zm-room-layout" style={{ backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center", color: "#ffffff" }}>
           <div className="zm-spinner" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#0e71eb", margin: "0 auto 16px" }} />
-          <h2 style={{ fontSize: 18, fontWeight: 600 }}>Joining Meeting...</h2>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>Connecting to audio and video streams</p>
+          <h2 style={{ fontSize: 18, fontWeight: 600 }}>Connecting to meeting...</h2>
         </div>
       </div>
     );
@@ -451,13 +430,11 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   if (isMeetingEnded) {
     return (
-      <div className="zm-room-page" style={{ alignItems: "center", justifyContent: "center" }}>
+      <div className="zm-room-layout" style={{ backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
         <div className="zm-modal-card" style={{ maxWidth: 460 }}>
           <div style={{ fontSize: 40 }}>🛑</div>
           <h2 className="zm-modal-title">This meeting has ended</h2>
-          <p className="zm-modal-desc">
-            The host has ended this meeting or the session has expired.
-          </p>
+          <p className="zm-modal-desc">The host has ended this meeting or the session has expired.</p>
           <div className="zm-modal-actions">
             <Link href="/dashboard" className="zm-modal-btn danger" style={{ textDecoration: "none" }}>
               Return to Dashboard
@@ -470,30 +447,11 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   if (isParticipantRemoved) {
     return (
-      <div className="zm-room-page" style={{ alignItems: "center", justifyContent: "center" }}>
+      <div className="zm-room-layout" style={{ backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
         <div className="zm-modal-card" style={{ maxWidth: 460 }}>
           <div style={{ fontSize: 40 }}>🚫</div>
           <h2 className="zm-modal-title">Removed from Meeting</h2>
-          <p className="zm-modal-desc">
-            You were removed from this meeting by the host.
-          </p>
-          <div className="zm-modal-actions">
-            <Link href="/dashboard" className="zm-modal-btn secondary" style={{ textDecoration: "none" }}>
-              Return to Dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (errorMessage) {
-    return (
-      <div className="zm-room-page" style={{ alignItems: "center", justifyContent: "center" }}>
-        <div className="zm-modal-card" style={{ maxWidth: 460 }}>
-          <div style={{ fontSize: 40 }}>⚠️</div>
-          <h2 className="zm-modal-title">Unable to Join</h2>
-          <p className="zm-modal-desc">{errorMessage}</p>
+          <p className="zm-modal-desc">You were removed from this meeting by the host.</p>
           <div className="zm-modal-actions">
             <Link href="/dashboard" className="zm-modal-btn secondary" style={{ textDecoration: "none" }}>
               Return to Dashboard
@@ -505,506 +463,525 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   }
 
   return (
-    <div className="zm-room-page">
-      {/* ---------------- Top Header ---------------- */}
-      <header className="zm-room-header">
-        <div className="zm-room-header-left">
-          {/* Green Shield button for Meeting Info */}
-          <button
-            type="button"
-            className="zm-shield-btn"
-            title="Meeting Information"
-            onClick={() => setIsShieldOpen((prev) => !prev)}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
-            </svg>
-          </button>
+    <div className="zm-room-layout">
+      {/* ---------------- Top Navbar (matching Image 1) ---------------- */}
+      <Navbar variant="workplace" />
 
-          <span className="zm-room-topic">{meeting?.title || "Zoom Meeting"}</span>
-          <span className="zm-room-timer">{formatTime(elapsedSeconds)}</span>
-
-          {/* Shield Popup Dropdown */}
-          {isShieldOpen && (
-            <div className="zm-shield-dropdown">
-              <div className="zm-shield-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
-                </svg>
-                <span>Meeting Information</span>
-              </div>
-              <div className="zm-shield-row">
-                <span className="zm-shield-row-label">Topic</span>
-                <span className="zm-shield-row-value">{meeting?.title}</span>
-              </div>
-              <div className="zm-shield-row">
-                <span className="zm-shield-row-label">Meeting ID</span>
-                <span className="zm-shield-row-value" style={{ fontFamily: "monospace", letterSpacing: 1, color: "#2d8cff" }}>
-                  {meeting?.meeting_id}
-                </span>
-              </div>
-              <div className="zm-shield-row">
-                <span className="zm-shield-row-label">Host</span>
-                <span className="zm-shield-row-value">{meeting?.host_name}</span>
-              </div>
-              <div className="zm-shield-row">
-                <span className="zm-shield-row-label">Passcode</span>
-                <span className="zm-shield-row-value">123456</span>
-              </div>
-              <button
-                type="button"
-                className="zm-copy-link-btn"
-                onClick={copyInviteLink}
-              >
-                {copiedLink ? "✓ Invite Link Copied!" : "Copy Invite Link"}
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="zm-room-header-right">
-          <button type="button" className="zm-view-toggle-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span>View</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ---------------- Main Content Workspace ---------------- */}
-      <main className="zm-room-main" onClick={() => { if (isShieldOpen) setIsShieldOpen(false); }}>
-        {/* Floating Animated Reaction */}
-        {activeReaction && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 100,
-              left: 30,
-              fontSize: 48,
-              zIndex: 999,
-              animation: "bounce 0.5s infinite alternate",
-            }}
-          >
-            {activeReaction}
-          </div>
-        )}
-
-        {/* Video Canvas Area */}
-        <div className="zm-video-canvas">
-          <div className={`zm-grid ${gridClass}`}>
-            {/* Tile 1: Local User Video / Avatar */}
-            <div className={`zm-video-tile ${isAudioOn ? "speaking" : ""}`}>
-              {isVideoOn && !mediaPermissionDenied ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="zm-video-element"
-                />
-              ) : (
-                <div className="zm-tile-avatar-view">
-                  <div className="zm-tile-avatar">
-                    {currentParticipant?.display_name
-                      ? currentParticipant.display_name.charAt(0).toUpperCase()
-                      : "A"}
-                  </div>
-                </div>
-              )}
-
-              {/* Local User Nametag */}
-              <div className="zm-tile-nametag">
-                <span className="zm-tile-nametag-icon">
-                  {isAudioOn ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#30d158">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#30d158" strokeWidth="2" fill="none" />
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                      <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-                    </svg>
-                  )}
-                </span>
-                <span>{currentParticipant?.display_name || "Ashwin Toppo"} (Me)</span>
-                {isHost && <span className="zm-tile-badge-host">Host</span>}
-              </div>
-            </div>
-
-            {/* Remote Participant Tiles */}
-            {remoteParticipants.map((p, idx) => (
-              <div key={p.id} className="zm-video-tile">
-                <div className="zm-tile-avatar-view">
-                  <div className={`zm-tile-avatar alt-${(idx % 4) + 1}`}>
-                    {p.display_name.charAt(0).toUpperCase()}
-                  </div>
-                </div>
-
-                {/* Nametag */}
-                <div className="zm-tile-nametag">
-                  <span className="zm-tile-nametag-icon">
-                    {p.is_audio_on ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#30d158">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#30d158" strokeWidth="2" fill="none" />
-                      </svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-                      </svg>
-                    )}
-                  </span>
-                  <span>{p.display_name}</span>
-                  {p.role === "host" && <span className="zm-tile-badge-host">Host</span>}
-                </div>
-
-                {/* Host Control Actions on Hover */}
-                {isHost && (
-                  <div className="zm-tile-hover-actions">
-                    <button
-                      type="button"
-                      className="zm-tile-action-btn danger"
-                      onClick={() => handleRemoveParticipant(p.id)}
-                      title="Remove participant"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ---------------- Slide-in Participants Drawer ---------------- */}
-        {isParticipantsOpen && (
-          <aside className="zm-side-drawer">
-            <div className="zm-drawer-header">
-              <span className="zm-drawer-title">Participants ({participants.length || 1})</span>
-              <button
-                type="button"
-                className="zm-drawer-close-btn"
-                onClick={() => setIsParticipantsOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="zm-drawer-search">
-              <input
-                type="text"
-                className="zm-drawer-search-input"
-                placeholder="Find a participant..."
-                value={participantSearch}
-                onChange={(e) => setParticipantSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="zm-participant-list">
-              {/* Local User Row */}
-              <div className="zm-participant-item">
-                <div className="zm-participant-info">
-                  <div className="zm-participant-avatar">
-                    {currentParticipant?.display_name?.charAt(0).toUpperCase() || "A"}
-                  </div>
-                  <div>
-                    <div className="zm-participant-name">
-                      {currentParticipant?.display_name || "Ashwin Toppo"}
-                      <span className="zm-participant-tags"> ({isHost ? "Host, me" : "me"})</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="zm-participant-actions">
-                  {isAudioOn ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#30d158">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
-                    </svg>
-                  )}
-                  {isVideoOn ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#cbd5e1">
-                      <polygon points="23 7 16 12 23 17 23 7" />
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                      <polygon points="23 7 16 12 23 17 23 7" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-
-              {/* Other Participants */}
-              {filteredParticipants
-                .filter((p) => !currentParticipant || p.id !== currentParticipant.id)
-                .map((p) => (
-                  <div key={p.id} className="zm-participant-item">
-                    <div className="zm-participant-info">
-                      <div className="zm-participant-avatar" style={{ backgroundColor: "#8a2be2" }}>
-                        {p.display_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="zm-participant-name">
-                          {p.display_name}
-                          {p.role === "host" && <span className="zm-participant-tags"> (Host)</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="zm-participant-actions">
-                      {p.is_audio_on ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#30d158">
-                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                          <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
-                        </svg>
-                      )}
-
-                      {isHost && (
-                        <button
-                          type="button"
-                          className="zm-tile-action-btn danger"
-                          style={{ padding: "2px 6px", fontSize: 10 }}
-                          onClick={() => handleRemoveParticipant(p.id)}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            {/* Drawer Host Controls Footer */}
-            <div className="zm-drawer-footer">
-              <button
-                type="button"
-                className="zm-drawer-btn"
-                onClick={copyInviteLink}
-              >
-                {copiedLink ? "✓ Copied" : "Invite"}
-              </button>
-              {isHost && (
-                <button
-                  type="button"
-                  className="zm-drawer-btn"
-                  onClick={handleMuteAll}
-                >
-                  Mute All
-                </button>
-              )}
-            </div>
-          </aside>
-        )}
-      </main>
-
-      {/* ---------------- Bottom Dock Toolbar ---------------- */}
-      <footer className="zm-room-dock">
-        {/* Left: Audio & Video controls */}
-        <div className="zm-dock-left">
-          {/* Mute / Unmute Button */}
-          <button
-            type="button"
-            className={`zm-dock-btn ${!isAudioOn ? "muted" : ""}`}
-            onClick={handleToggleAudio}
-            id="btn-toggle-mic"
-          >
-            {isAudioOn ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
+      <div className="zm-room-main-container">
+        {/* ---------------- Left Sidebar (matching Image 1) ---------------- */}
+        <aside className="zm-room-sidebar">
+          <div className="zm-room-side-top">
+            <Link href="/dashboard" className="zm-room-side-item" title="Home">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                <line x1="1" y1="1" x2="23" y2="23" />
-                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            )}
-            <span>{isAudioOn ? "Mute" : "Unmute"}</span>
-          </button>
+              <span>Home</span>
+            </Link>
 
-          {/* Start / Stop Video Button */}
-          <button
-            type="button"
-            className={`zm-dock-btn ${!isVideoOn ? "muted" : ""}`}
-            onClick={handleToggleVideo}
-            id="btn-toggle-video"
-          >
-            {isVideoOn ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div className="zm-room-side-item" title="Chat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>Chat</span>
+            </div>
+
+            <div className="zm-room-side-item active" title="Meetings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="23 7 16 12 23 17 23 7" />
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-                <line x1="1" y1="1" x2="23" y2="23" />
-                <path d="M21 15.5l-5-3.5v-5l5-3.5v12zM2 5h7.5M16 19H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5" />
+              <span>Meetings</span>
+            </div>
+
+            <div className="zm-room-side-item" title="Contacts">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
               </svg>
-            )}
-            <span>{isVideoOn ? "Stop Video" : "Start Video"}</span>
-          </button>
-        </div>
+              <span>Contacts</span>
+            </div>
+          </div>
 
-        {/* Center: Meeting Actions */}
-        <div className="zm-dock-center">
-          {/* Security */}
-          <button
-            type="button"
-            className="zm-dock-btn"
-            onClick={() => setIsShieldOpen((prev) => !prev)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <div className="zm-room-side-item" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
-            <span>Security</span>
-          </button>
+            <span>Settings</span>
+          </div>
+        </aside>
 
-          {/* Participants */}
-          <button
-            type="button"
-            className={`zm-dock-btn ${isParticipantsOpen ? "active" : ""}`}
-            onClick={() => setIsParticipantsOpen((prev) => !prev)}
-            id="btn-toggle-participants"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span className="zm-dock-btn-badge">{participants.length || 1}</span>
-            <span>Participants</span>
-          </button>
+        {/* ---------------- Central Meeting Viewport (matching Image 1) ---------------- */}
+        <section className="zm-room-viewport">
+          {/* Top internal meeting bar matching Image 1 */}
+          <div className="zm-viewport-header">
+            <div className="zm-viewport-header-left" onClick={() => setIsShieldOpen((prev) => !prev)}>
+              <button type="button" className="zm-info-icon-btn" title="Meeting Information">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </button>
+              <span>{meeting?.title || "Ashwin Toppo's Zoom Meeting"}</span>
+            </div>
 
-          {/* Chat */}
-          <button
-            type="button"
-            className="zm-dock-btn"
-            onClick={() => alert("In-meeting chat is available.")}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span>Chat</span>
-          </button>
-
-          {/* Share Screen */}
-          <button
-            type="button"
-            className="zm-dock-btn share-btn"
-            onClick={async () => {
-              try {
-                await navigator.mediaDevices.getDisplayMedia({ video: true });
-              } catch {
-                // Ignore if user cancelled dialog
-              }
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-              <polyline points="16 9 12 5 8 9" />
-            </svg>
-            <span>Share Screen</span>
-          </button>
-
-          {/* Record */}
-          <button
-            type="button"
-            className="zm-dock-btn"
-            onClick={() => alert("Cloud recording has started.")}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" />
-            </svg>
-            <span>Record</span>
-          </button>
-
-          {/* Reactions */}
-          <div style={{ position: "relative" }}>
-            <button
-              type="button"
-              className="zm-dock-btn"
-              onClick={() => setIsReactionsOpen((prev) => !prev)}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                <line x1="9" y1="9" x2="9.01" y2="9" />
-                <line x1="15" y1="9" x2="15.01" y2="9" />
-              </svg>
-              <span>Reactions</span>
-            </button>
-
-            {isReactionsOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 60,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  backgroundColor: "#1e222b",
-                  border: "1px solid #333946",
-                  borderRadius: 24,
-                  padding: "6px 12px",
-                  display: "flex",
-                  gap: 10,
-                  fontSize: 22,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                  zIndex: 100,
-                }}
+            {/* Right icons matching Image 1: Green Shield, Pencil, Sparkle, Grid view, Avatar circle */}
+            <div className="zm-viewport-header-right">
+              <button
+                type="button"
+                className="zm-hdr-icon-btn zm-hdr-shield"
+                title="Security"
+                onClick={() => setIsShieldOpen((prev) => !prev)}
               >
-                {["👍", "👏", "❤️", "😂", "🎉", "✋"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 22 }}
-                    onClick={() => triggerReaction(emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                </svg>
+              </button>
+
+              <button type="button" className="zm-hdr-icon-btn" title="Whiteboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                </svg>
+              </button>
+
+              <button type="button" className="zm-hdr-icon-btn" title="AI Companion">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                </svg>
+              </button>
+
+              <button type="button" className="zm-hdr-icon-btn" title="View">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </button>
+
+              <div className="zm-hdr-avatar-badge" title="Ashwin Toppo">
+                zm
+              </div>
+            </div>
+
+            {/* Info Dropdown */}
+            {isShieldOpen && (
+              <div className="zm-shield-dropdown">
+                <div className="zm-shield-header">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                  </svg>
+                  <span>Meeting Information</span>
+                </div>
+                <div className="zm-shield-row">
+                  <span className="zm-shield-row-label">Topic</span>
+                  <span className="zm-shield-row-value">{meeting?.title}</span>
+                </div>
+                <div className="zm-shield-row">
+                  <span className="zm-shield-row-label">Meeting ID</span>
+                  <span className="zm-shield-row-value" style={{ fontFamily: "monospace", color: "#2d8cff" }}>
+                    {meeting?.meeting_id}
+                  </span>
+                </div>
+                <div className="zm-shield-row">
+                  <span className="zm-shield-row-label">Host</span>
+                  <span className="zm-shield-row-value">{meeting?.host_name}</span>
+                </div>
+                <div className="zm-shield-row">
+                  <span className="zm-shield-row-label">Passcode</span>
+                  <span className="zm-shield-row-value">123456</span>
+                </div>
+                <button type="button" className="zm-copy-link-btn" onClick={copyInviteLink}>
+                  {copiedLink ? "✓ Invite Link Copied!" : "Copy Invite Link"}
+                </button>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Right: End / Leave button */}
-        <div className="zm-dock-right">
-          <button
-            type="button"
-            className="zm-end-btn"
-            onClick={() => setIsEndModalOpen(true)}
-            id="btn-leave-meeting"
-          >
-            {isHost ? "End" : "Leave"}
-          </button>
-        </div>
-      </footer>
+          {/* Video Canvas */}
+          <div className="zm-room-video-canvas" onClick={() => { if (isShieldOpen) setIsShieldOpen(false); }}>
+            {activeReaction && (
+              <div style={{ position: "absolute", bottom: 80, left: 24, fontSize: 44, zIndex: 99 }}>
+                {activeReaction}
+              </div>
+            )}
 
-      {/* ---------------- End / Leave Confirmation Modal ---------------- */}
+            <div className={`zm-grid ${gridClass}`}>
+              {/* Local User Tile */}
+              <div className="zm-video-tile">
+                {isVideoOn && !mediaPermissionDenied ? (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="zm-video-element"
+                  />
+                ) : (
+                  <div className="zm-tile-avatar-view">
+                    <div className="zm-tile-avatar">
+                      {currentParticipant?.display_name
+                        ? currentParticipant.display_name.charAt(0).toUpperCase()
+                        : "A"}
+                    </div>
+                  </div>
+                )}
+
+                {/* Nametag matching Image 1: mic state + name */}
+                <div className="zm-tile-nametag">
+                  {!isAudioOn ? (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                      <path d="M17 16.95A7 7 0 0 1 5 12v-2" />
+                    </svg>
+                  ) : (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#30d158">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    </svg>
+                  )}
+                  <span>{currentParticipant?.display_name || "Ashwin Toppo"}</span>
+                </div>
+              </div>
+
+              {/* Remote Participants */}
+              {remoteParticipants.map((p, idx) => (
+                <div key={p.id} className="zm-video-tile">
+                  <div className="zm-tile-avatar-view">
+                    <div className={`zm-tile-avatar alt-${(idx % 4) + 1}`}>
+                      {p.display_name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="zm-tile-nametag">
+                    {!p.is_audio_on ? (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                      </svg>
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#30d158">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      </svg>
+                    )}
+                    <span>{p.display_name}</span>
+                  </div>
+
+                  {isHost && (
+                    <div className="zm-tile-hover-actions">
+                      <button
+                        type="button"
+                        className="zm-tile-action-btn danger"
+                        onClick={() => handleRemoveParticipant(p.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ---------------- Slide-in Participants Drawer ---------------- */}
+          {isParticipantsOpen && (
+            <aside className="zm-side-drawer" style={{ position: "absolute", right: 0, top: 0, bottom: 64 }}>
+              <div className="zm-drawer-header">
+                <span className="zm-drawer-title">Participants ({participants.length || 1})</span>
+                <button
+                  type="button"
+                  className="zm-drawer-close-btn"
+                  onClick={() => setIsParticipantsOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="zm-drawer-search">
+                <input
+                  type="text"
+                  className="zm-drawer-search-input"
+                  placeholder="Find a participant..."
+                  value={participantSearch}
+                  onChange={(e) => setParticipantSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="zm-participant-list">
+                <div className="zm-participant-item">
+                  <div className="zm-participant-info">
+                    <div className="zm-participant-avatar">
+                      {currentParticipant?.display_name?.charAt(0).toUpperCase() || "A"}
+                    </div>
+                    <div className="zm-participant-name">
+                      {currentParticipant?.display_name || "Ashwin Toppo"}
+                      <span className="zm-participant-tags"> (Host, me)</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {isAudioOn ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#30d158"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /></svg>
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12" /></svg>
+                    )}
+                  </div>
+                </div>
+
+                {filteredParticipants
+                  .filter((p) => !currentParticipant || p.id !== currentParticipant.id)
+                  .map((p) => (
+                    <div key={p.id} className="zm-participant-item">
+                      <div className="zm-participant-info">
+                        <div className="zm-participant-avatar" style={{ backgroundColor: "#8a2be2" }}>
+                          {p.display_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="zm-participant-name">{p.display_name}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {p.is_audio_on ? (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#30d158"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /></svg>
+                        ) : (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12" /></svg>
+                        )}
+                        {isHost && (
+                          <button
+                            type="button"
+                            className="zm-tile-action-btn danger"
+                            style={{ padding: "2px 6px", fontSize: 10 }}
+                            onClick={() => handleRemoveParticipant(p.id)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              <div className="zm-drawer-footer">
+                <button type="button" className="zm-drawer-btn" onClick={copyInviteLink}>
+                  {copiedLink ? "✓ Copied" : "Invite"}
+                </button>
+                {isHost && (
+                  <button type="button" className="zm-drawer-btn primary" onClick={handleMuteAll}>
+                    Mute All
+                  </button>
+                )}
+              </div>
+            </aside>
+          )}
+
+          {/* ---------------- Bottom Control Toolbar Dock (matching Image 1) ---------------- */}
+          <footer className="zm-bottom-dock">
+            {/* Left: Audio & Video */}
+            <div className="zm-dock-left">
+              {/* Audio */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={handleToggleAudio}
+                title={isAudioOn ? "Mute Microphone" : "Unmute Microphone"}
+              >
+                <div className="zm-dock-item-icon">
+                  {!isAudioOn ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                      <path d="M17 16.95A7 7 0 0 1 5 12v-2" />
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  )}
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Audio</span>
+              </button>
+
+              {/* Video (with rounded border box matching Image 1) */}
+              <button
+                type="button"
+                className="zm-dock-item video-box"
+                onClick={handleToggleVideo}
+                title={isVideoOn ? "Stop Video" : "Start Video"}
+              >
+                <div className="zm-dock-item-icon">
+                  {!isVideoOn ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                      <path d="M21 15.5l-5-3.5v-5l5-3.5v12zM2 5h7.5M16 19H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5" />
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="23 7 16 12 23 17 23 7" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg>
+                  )}
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Video</span>
+              </button>
+            </div>
+
+            {/* Center: Participants, Chat, React, Share, Host tools, More */}
+            <div className="zm-dock-center">
+              {/* Participants */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={() => setIsParticipantsOpen((prev) => !prev)}
+              >
+                <div className="zm-dock-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                  </svg>
+                  <span style={{ fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{participants.length || 1}</span>
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Participants</span>
+              </button>
+
+              {/* Chat */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={() => alert("In-meeting chat is available.")}
+              >
+                <div className="zm-dock-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Chat</span>
+              </button>
+
+              {/* React */}
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  className="zm-dock-item"
+                  onClick={() => setIsReactionsOpen((prev) => !prev)}
+                >
+                  <div className="zm-dock-item-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                    <span className="zm-dock-caret">⌃</span>
+                  </div>
+                  <span>React</span>
+                </button>
+
+                {isReactionsOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 56,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      backgroundColor: "#1e222b",
+                      border: "1px solid #333946",
+                      borderRadius: 24,
+                      padding: "6px 12px",
+                      display: "flex",
+                      gap: 10,
+                      fontSize: 22,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.7)",
+                      zIndex: 100,
+                    }}
+                  >
+                    {["👍", "👏", "❤️", "😂", "🎉", "✋"].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 22 }}
+                        onClick={() => triggerReaction(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Share */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={async () => {
+                  try {
+                    await navigator.mediaDevices.getDisplayMedia({ video: true });
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                <div className="zm-dock-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <polyline points="16 9 12 5 8 9" />
+                  </svg>
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Share</span>
+              </button>
+
+              {/* Host tools */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={() => setIsShieldOpen((prev) => !prev)}
+              >
+                <div className="zm-dock-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <span className="zm-dock-caret">⌃</span>
+                </div>
+                <span>Host tools</span>
+              </button>
+
+              {/* More */}
+              <button
+                type="button"
+                className="zm-dock-item"
+                onClick={() => alert("More options: Cloud Recording, Virtual Backgrounds, Audio Settings.")}
+              >
+                <div className="zm-dock-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="19" cy="12" r="1" />
+                    <circle cx="5" cy="12" r="1" />
+                  </svg>
+                </div>
+                <span>More</span>
+              </button>
+            </div>
+
+            {/* Right: End matching Image 1 */}
+            <div className="zm-dock-right">
+              <button
+                type="button"
+                className="zm-end-circle-btn"
+                onClick={() => setIsEndModalOpen(true)}
+              >
+                <div className="zm-end-circle-icon">✕</div>
+                <span>End</span>
+              </button>
+            </div>
+          </footer>
+        </section>
+      </div>
+
+      {/* ---------------- End / Leave Modal ---------------- */}
       {isEndModalOpen && (
         <div className="zm-modal-backdrop" onClick={() => setIsEndModalOpen(false)}>
           <div className="zm-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1013,7 +990,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             </h2>
             <p className="zm-modal-desc">
               {isHost
-                ? "You can end the meeting for all participants, or leave the meeting and assign a new host."
+                ? "You can end the meeting for all participants, or leave the meeting."
                 : "Are you sure you want to leave this meeting?"}
             </p>
             <div className="zm-modal-actions">

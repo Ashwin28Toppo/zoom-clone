@@ -1,16 +1,17 @@
 /* ==========================================================================
-   Schedule Meeting Page Styles (Matching Reference Screenshots)
+   Schedule Meeting Page Styles (Matching Image 3 Reference Screenshot)
    ========================================================================== */
 
 .zm-schedule-page {
   display: flex;
   min-height: calc(100vh - var(--zm-header-height));
   background-color: #ffffff;
+  color: #111827;
 }
 
 .zm-schedule-sidebar {
   width: 220px;
-  border-right: 1px solid var(--zm-border);
+  border-right: 1px solid #e5e8ec;
   background-color: #ffffff;
   padding: 20px 0;
   display: flex;
@@ -29,7 +30,7 @@
 .zm-sched-side-heading {
   font-size: 11px;
   font-weight: 700;
-  color: var(--zm-text-muted);
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 12px 24px 6px;
@@ -40,7 +41,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 24px;
-  color: var(--zm-text-secondary);
+  color: #334155;
   text-decoration: none;
   font-weight: 500;
   cursor: pointer;
@@ -50,19 +51,19 @@
 
 .zm-sched-side-item:hover {
   background-color: #f7f9fa;
-  color: var(--zm-text-primary);
+  color: #0f172a;
 }
 
 .zm-sched-side-item.active {
   background-color: #edf5ff;
-  color: var(--zm-blue);
+  color: #0e71eb;
   font-weight: 600;
-  border-left-color: var(--zm-blue);
+  border-left-color: #0e71eb;
 }
 
 .zm-tag-new {
   background-color: #e5f2ff;
-  color: var(--zm-blue);
+  color: #0e71eb;
   font-size: 10px;
   font-weight: 700;
   padding: 1px 5px;
@@ -75,7 +76,7 @@
   border-radius: 20px;
   border: 1px solid #70b4ff;
   background-color: #eef6ff;
-  color: var(--zm-blue);
+  color: #0e71eb;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -95,6 +96,7 @@
   flex: 1;
   padding: 32px 56px 64px;
   max-width: 860px;
+  background-color: #ffffff;
 }
 
 .zm-back-link {
@@ -102,7 +104,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--zm-blue);
+  color: #0e71eb;
   text-decoration: none;
   font-weight: 500;
   margin-bottom: 20px;
@@ -116,7 +118,7 @@
 .zm-schedule-title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--zm-text-primary);
+  color: #111827;
   margin-bottom: 32px;
 }
 
@@ -131,12 +133,12 @@
 .zm-form-row-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--zm-text-primary);
+  color: #111827;
   padding-top: 8px;
 }
 
 .zm-form-row-label .required {
-  color: var(--zm-danger);
+  color: #e02828;
   margin-right: 4px;
 }
 
@@ -151,21 +153,23 @@
   max-width: 480px;
   padding: 8px 12px;
   font-size: 14px;
-  border: 1px solid var(--zm-border);
+  border: 1px solid #d0d5dd !important;
+  background-color: #ffffff !important;
+  color: #111827 !important;
   border-radius: 6px;
   outline: none;
   transition: all 0.15s ease;
 }
 
 .zm-sched-input:focus {
-  border-color: var(--zm-border-focus);
+  border-color: #0e71eb !important;
   box-shadow: 0 0 0 2px rgba(14, 113, 235, 0.15);
 }
 
 .zm-add-desc-btn {
   background: none;
   border: none;
-  color: var(--zm-blue);
+  color: #0e71eb;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -189,15 +193,16 @@
 .zm-sched-select {
   padding: 8px 12px;
   font-size: 13px;
-  border: 1px solid var(--zm-border);
+  border: 1px solid #d0d5dd !important;
   border-radius: 6px;
   outline: none;
-  background-color: #ffffff;
+  background-color: #ffffff !important;
+  color: #111827 !important;
   cursor: pointer;
 }
 
 .zm-sched-select:focus {
-  border-color: var(--zm-border-focus);
+  border-color: #0e71eb !important;
 }
 
 .zm-notice-box {
@@ -222,7 +227,7 @@
 }
 
 .zm-notice-link {
-  color: var(--zm-blue);
+  color: #0e71eb;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -239,13 +244,13 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--zm-text-primary);
+  color: #111827;
   cursor: pointer;
 }
 
 .zm-radio-option input[type="radio"],
 .zm-checkbox-option input[type="checkbox"] {
-  accent-color: var(--zm-blue);
+  accent-color: #0e71eb;
   cursor: pointer;
 }
 
@@ -254,14 +259,14 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--zm-text-primary);
+  color: #111827;
   cursor: pointer;
 }
 
 .zm-pill-action {
   border: 1px solid #c2dbff;
   background-color: #f2f7ff;
-  color: var(--zm-blue);
+  color: #0e71eb;
   padding: 6px 14px;
   border-radius: 6px;
   font-size: 13px;
@@ -285,6 +290,7 @@
   column-gap: 16px;
   font-size: 13px;
   align-items: center;
+  color: #111827;
 }
 
 .zm-sched-footer {
@@ -293,11 +299,11 @@
   gap: 16px;
   margin-top: 40px;
   padding-top: 24px;
-  border-top: 1px solid var(--zm-border);
+  border-top: 1px solid #e5e8ec;
 }
 
 .zm-sched-save-btn {
-  background-color: var(--zm-blue);
+  background-color: #0e71eb;
   color: #ffffff;
   border: none;
   padding: 10px 28px;
@@ -309,7 +315,7 @@
 }
 
 .zm-sched-save-btn:hover:not(:disabled) {
-  background-color: var(--zm-blue-hover);
+  background-color: #005ce6;
 }
 
 .zm-sched-save-btn:disabled {
@@ -319,8 +325,8 @@
 
 .zm-sched-cancel-btn {
   background-color: #f4f6f8;
-  color: var(--zm-text-secondary);
-  border: 1px solid var(--zm-border);
+  color: #475569;
+  border: 1px solid #d0d5dd;
   padding: 10px 24px;
   border-radius: 20px;
   font-size: 14px;
@@ -332,7 +338,7 @@
 
 .zm-sched-cancel-btn:hover {
   background-color: #e5e8ec;
-  color: var(--zm-text-primary);
+  color: #111827;
 }
 
 .zm-floating-chat {
@@ -342,7 +348,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: var(--zm-blue);
+  background-color: #0e71eb;
   color: #ffffff;
   display: flex;
   align-items: center;

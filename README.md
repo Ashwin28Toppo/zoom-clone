@@ -122,5 +122,6 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Routes Overview
 
 - `/dashboard`: Zoom-style landing dashboard with instant action tiles, calendar, upcoming and recent meetings.
+- `/meeting/schedule`: Dedicated Zoom meeting scheduling page with date, time, duration, timezone, and security options.
 - `/meeting/[meetingId]/prejoin`: Pre-join screen with live camera preview, audio/video toggles, passcode, and name input.
 - `/meeting/[meetingId]`: Zoom-like meeting room interface with active video tiles, meeting info, audio/video controls, participant panel, and end controls.

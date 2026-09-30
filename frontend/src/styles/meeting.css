@@ -1,107 +1,168 @@
-/* Zoom Meeting Room UI Styles */
+/* Zoom Meeting Room UI Styles (Matching Image 1 Reference Screenshot) */
 
-.zm-room-page {
+.zm-room-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background-color: #0b0c0e;
-  color: #ffffff;
+  background-color: #f7f9fa;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
 }
 
-/* ---------------- Top Header Bar ---------------- */
-.zm-room-header {
+.zm-room-main-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.2) 80%, transparent 100%);
-  height: 48px;
-  z-index: 20;
+  flex: 1;
+  overflow: hidden;
   position: relative;
 }
 
-.zm-room-header-left {
+/* ---------------- Left Sidebar (matching Image 1) ---------------- */
+.zm-room-sidebar {
+  width: 68px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e8ec;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  padding: 16px 0 12px;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
-.zm-shield-btn {
+.zm-room-side-top {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+}
+
+.zm-room-side-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  padding: 6px 0;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.zm-room-side-item:hover {
+  color: #0e71eb;
+}
+
+.zm-room-side-item.active {
+  color: #0e71eb;
+  font-weight: 600;
+}
+
+.zm-room-side-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------------- Central Meeting Viewport (Black Background) ---------------- */
+.zm-room-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top internal bar of meeting viewport */
+.zm-viewport-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background-color: #000000;
+  z-index: 20;
+  height: 44px;
+}
+
+.zm-viewport-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.zm-info-icon-btn {
   background: transparent;
   border: none;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.zm-viewport-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.zm-hdr-icon-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
   border-radius: 4px;
-  color: #30d158;
-  transition: background-color 0.15s;
+  transition: color 0.15s;
 }
 
-.zm-shield-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.zm-room-topic {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
-  max-width: 320px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.zm-room-timer {
-  font-size: 12px;
-  font-weight: 500;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.zm-room-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.zm-view-toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+.zm-hdr-icon-btn:hover {
   color: #ffffff;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
+}
+
+.zm-hdr-shield {
+  color: #30d158;
+}
+
+.zm-hdr-avatar-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #333842;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: background 0.15s;
+  justify-content: center;
 }
 
-.zm-view-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Info popup dropdown from Green Shield */
+/* Info popup dropdown from Shield / Info */
 .zm-shield-dropdown {
   position: absolute;
   top: 48px;
-  left: 16px;
-  width: 340px;
+  left: 18px;
+  width: 320px;
   background-color: #1a1d24;
   border: 1px solid #2d3340;
   border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
   padding: 18px;
   z-index: 100;
   color: #ffffff;
@@ -113,7 +174,7 @@
   gap: 8px;
   margin-bottom: 14px;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   color: #30d158;
 }
 
@@ -128,7 +189,6 @@
   text-transform: uppercase;
   color: #94a3b8;
   font-weight: 600;
-  letter-spacing: 0.5px;
   margin-bottom: 3px;
 }
 
@@ -136,7 +196,6 @@
   font-size: 13px;
   color: #f1f5f9;
   font-weight: 500;
-  word-break: break-all;
 }
 
 .zm-copy-link-btn {
@@ -157,32 +216,24 @@
   background: #005ce6;
 }
 
-/* ---------------- Main Content Workspace ---------------- */
-.zm-room-main {
-  flex: 1;
-  display: flex;
-  position: relative;
-  overflow: hidden;
-}
-
-.zm-video-canvas {
+/* ---------------- Video Canvas ---------------- */
+.zm-room-video-canvas {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 0;
+  background-color: #000000;
   position: relative;
   overflow: hidden;
 }
 
-/* Video Grid Layouts */
 .zm-grid {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   height: 100%;
-  max-width: 1400px;
-  max-height: 850px;
+  padding: 8px 12px;
 }
 
 .zm-grid-1 {
@@ -195,15 +246,8 @@
   grid-template-rows: 1fr;
 }
 
-.zm-grid-3,
 .zm-grid-4 {
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-
-.zm-grid-5,
-.zm-grid-6 {
-  grid-template-columns: repeat(3, 1fr);
   grid-template-rows: 1fr 1fr;
 }
 
@@ -212,29 +256,23 @@
   grid-auto-rows: 1fr;
 }
 
-/* Individual Video Tile */
 .zm-video-tile {
-  background-color: #16181d;
-  border-radius: 12px;
+  background-color: #0d0e11;
+  border-radius: 8px;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid transparent;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.zm-video-tile.speaking {
-  border-color: #30d158;
-  box-shadow: 0 0 12px rgba(48, 209, 88, 0.4);
+  width: 100%;
+  height: 100%;
 }
 
 .zm-video-element {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1); /* mirror selfie camera */
+  object-fit: contain;
+  transform: scaleX(-1);
 }
 
 .zm-tile-avatar-view {
@@ -245,17 +283,16 @@
 }
 
 .zm-tile-avatar {
-  width: 88px;
-  height: 88px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   background: linear-gradient(135deg, #0e71eb, #00c6ff);
   color: #ffffff;
-  font-size: 34px;
+  font-size: 42px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .zm-tile-avatar.alt-1 { background: linear-gradient(135deg, #8a2be2, #4a00e0); }
@@ -263,17 +300,16 @@
 .zm-tile-avatar.alt-3 { background: linear-gradient(135deg, #27ae60, #2ecc71); }
 .zm-tile-avatar.alt-4 { background: linear-gradient(135deg, #e74c3c, #c0392b); }
 
-/* Tile Name Tag Badge */
+/* Tile Nametag matching Image 1: red mic icon + name in bottom left */
 .zm-tile-nametag {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  padding: 4px 10px;
-  border-radius: 6px;
+  bottom: 14px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 3px 8px;
+  border-radius: 4px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -281,22 +317,6 @@
   pointer-events: none;
 }
 
-.zm-tile-badge-host {
-  background-color: #0e71eb;
-  color: #ffffff;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.zm-tile-nametag-icon {
-  display: flex;
-  align-items: center;
-}
-
-/* Floating Host Tile Controls on Hover */
 .zm-tile-hover-actions {
   position: absolute;
   top: 10px;
@@ -323,32 +343,120 @@
   font-size: 11px;
   cursor: pointer;
   font-weight: 500;
-  transition: background 0.15s;
-}
-
-.zm-tile-action-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .zm-tile-action-btn.danger:hover {
   background: #ff4d4f;
 }
 
+/* ---------------- Bottom Control Toolbar Dock (matching Image 1) ---------------- */
+.zm-bottom-dock {
+  background-color: #000000;
+  border-top: 1px solid #1c1f26;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  height: 64px;
+  z-index: 40;
+}
+
+.zm-dock-left,
+.zm-dock-center,
+.zm-dock-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zm-dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 3px;
+  min-width: 58px;
+  transition: background-color 0.15s, color 0.15s;
+  position: relative;
+}
+
+.zm-dock-item:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.zm-dock-item.video-box {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 5px 12px;
+}
+
+.zm-dock-item.video-box:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.zm-dock-item-icon {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zm-dock-caret {
+  font-size: 9px;
+  margin-left: 2px;
+  color: #94a3b8;
+}
+
+.zm-end-circle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  gap: 3px;
+  padding: 4px 12px;
+  color: #ff4d4f;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.zm-end-circle-icon {
+  width: 22px;
+  height: 22px;
+  background-color: #ff3b30;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.zm-end-circle-btn:hover .zm-end-circle-icon {
+  background-color: #e02828;
+}
+
 /* ---------------- Side Drawer (Participants) ---------------- */
 .zm-side-drawer {
-  width: 360px;
+  width: 320px;
   background-color: #181b20;
   border-left: 1px solid #282c35;
   display: flex;
   flex-direction: column;
   height: 100%;
-  animation: slideInRight 0.2s ease-out;
   z-index: 30;
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
 }
 
 .zm-drawer-header {
@@ -360,7 +468,7 @@
 }
 
 .zm-drawer-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #ffffff;
 }
@@ -369,16 +477,9 @@
   background: transparent;
   border: none;
   color: #94a3b8;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  line-height: 1;
   padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.zm-drawer-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
 }
 
 .zm-drawer-search {
@@ -397,10 +498,6 @@
   outline: none;
 }
 
-.zm-drawer-search-input:focus {
-  border-color: #0e71eb;
-}
-
 .zm-participant-list {
   flex: 1;
   overflow-y: auto;
@@ -412,7 +509,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  transition: background 0.15s;
 }
 
 .zm-participant-item:hover {
@@ -423,47 +519,34 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
 }
 
 .zm-participant-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: #0e71eb;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
 .zm-participant-name {
   font-size: 13px;
   font-weight: 600;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .zm-participant-tags {
   font-size: 11px;
   color: #8c93a0;
-  margin-left: 4px;
-}
-
-.zm-participant-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
 }
 
 .zm-drawer-footer {
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-top: 1px solid #282c35;
   display: flex;
   gap: 10px;
@@ -472,112 +555,19 @@
 
 .zm-drawer-btn {
   flex: 1;
-  padding: 8px 12px;
+  padding: 8px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid #333842;
   background: #232730;
   color: #ffffff;
-  transition: all 0.15s;
-}
-
-.zm-drawer-btn:hover {
-  background: #2f3542;
 }
 
 .zm-drawer-btn.primary {
   background: #0e71eb;
   border-color: #0e71eb;
-}
-
-.zm-drawer-btn.primary:hover {
-  background: #005ce6;
-}
-
-/* ---------------- Bottom Control Dock (Zoom Toolbar) ---------------- */
-.zm-room-dock {
-  background-color: #181b20;
-  border-top: 1px solid #262930;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  height: 68px;
-  z-index: 40;
-}
-
-.zm-dock-left,
-.zm-dock-center,
-.zm-dock-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.zm-dock-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: #cbd5e1;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 500;
-  gap: 4px;
-  min-width: 60px;
-  transition: background-color 0.15s, color 0.15s;
-  position: relative;
-}
-
-.zm-dock-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-}
-
-.zm-dock-btn.active {
-  color: #0e71eb;
-}
-
-.zm-dock-btn.muted {
-  color: #ff4d4f;
-}
-
-.zm-dock-btn.share-btn {
-  color: #30d158;
-}
-
-.zm-dock-btn-badge {
-  position: absolute;
-  top: 4px;
-  right: 12px;
-  background-color: #0e71eb;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 10px;
-}
-
-.zm-end-btn {
-  background-color: #e02828;
-  color: #ffffff;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.zm-end-btn:hover {
-  background-color: #c91f1f;
 }
 
 /* ---------------- End / Leave Modal ---------------- */
@@ -597,9 +587,8 @@
   border: 1px solid #323846;
   border-radius: 12px;
   width: 90%;
-  max-width: 420px;
+  max-width: 400px;
   padding: 24px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -607,7 +596,7 @@
 }
 
 .zm-modal-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -623,17 +612,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
 }
 
 .zm-modal-btn {
-  padding: 10px 16px;
+  padding: 9px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: background 0.15s;
 }
 
 .zm-modal-btn.danger {
@@ -641,44 +628,12 @@
   color: #ffffff;
 }
 
-.zm-modal-btn.danger:hover {
-  background-color: #b81e1e;
-}
-
 .zm-modal-btn.secondary {
   background-color: #2c3240;
   color: #ffffff;
 }
 
-.zm-modal-btn.secondary:hover {
-  background-color: #3b4254;
-}
-
 .zm-modal-btn.cancel {
   background: transparent;
   color: #94a3b8;
-}
-
-.zm-modal-btn.cancel:hover {
-  color: #ffffff;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .zm-side-drawer {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-  }
-
-  .zm-dock-btn span {
-    display: none;
-  }
-
-  .zm-dock-btn {
-    min-width: 40px;
-    padding: 8px;
-  }
 }
