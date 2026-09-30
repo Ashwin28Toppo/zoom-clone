@@ -2,14 +2,14 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createInstantMeeting } from "@/lib/api";
 
 interface ActionButtonsProps {
   onOpenJoin: () => void;
-  onOpenSchedule: () => void;
 }
 
-export default function ActionButtons({ onOpenJoin, onOpenSchedule }: ActionButtonsProps) {
+export default function ActionButtons({ onOpenJoin }: ActionButtonsProps) {
   const router = useRouter();
   const [isCreatingInstant, setIsCreatingInstant] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -106,12 +106,13 @@ export default function ActionButtons({ onOpenJoin, onOpenSchedule }: ActionButt
 
         {/* Schedule Meeting */}
         <div className="zm-action-item">
-          <button
+          <Link
             id="btn-schedule-meeting"
+            href="/meeting/schedule"
             className="zm-action-btn indigo"
-            onClick={onOpenSchedule}
             title="Schedule a future meeting"
             aria-label="Schedule meeting"
+            style={{ textDecoration: "none" }}
           >
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -122,7 +123,7 @@ export default function ActionButtons({ onOpenJoin, onOpenSchedule }: ActionButt
                 19
               </text>
             </svg>
-          </button>
+          </Link>
           <span className="zm-action-label">Schedule</span>
         </div>
       </section>

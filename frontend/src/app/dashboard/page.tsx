@@ -7,21 +7,15 @@ import DashboardClock from "@/components/DashboardClock";
 import ActionButtons from "@/components/ActionButtons";
 import MeetingList from "@/components/MeetingList";
 import JoinModal from "@/components/JoinModal";
-import ScheduleModal from "@/components/ScheduleModal";
 import "@/styles/dashboard.css";
 
 export default function DashboardPage() {
   const [isJoinOpen, setIsJoinOpen] = useState(false);
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  function handleMeetingScheduled() {
-    setRefreshTrigger((prev) => prev + 1);
-  }
+  const [refreshTrigger] = useState(0);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <Navbar />
+      <Navbar onOpenJoin={() => setIsJoinOpen(true)} />
 
       <div className="zm-app-body">
         <Sidebar />
@@ -31,7 +25,6 @@ export default function DashboardPage() {
 
           <ActionButtons
             onOpenJoin={() => setIsJoinOpen(true)}
-            onOpenSchedule={() => setIsScheduleOpen(true)}
           />
 
           <MeetingList refreshTrigger={refreshTrigger} />
@@ -41,12 +34,6 @@ export default function DashboardPage() {
       <JoinModal
         isOpen={isJoinOpen}
         onClose={() => setIsJoinOpen(false)}
-      />
-
-      <ScheduleModal
-        isOpen={isScheduleOpen}
-        onClose={() => setIsScheduleOpen(false)}
-        onMeetingScheduled={handleMeetingScheduled}
       />
     </div>
   );
