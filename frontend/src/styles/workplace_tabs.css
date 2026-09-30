@@ -3,10 +3,13 @@
 .zm-workplace-container {
   display: flex;
   height: calc(100vh - var(--zm-header-height));
+  margin-top: var(--zm-header-height);
+  margin-left: var(--zm-sidebar-width);
   background-color: #ffffff;
   color: #111827;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
 }
 
 /* ---------------- Sub-Sidebar (Middle Panel) ---------------- */

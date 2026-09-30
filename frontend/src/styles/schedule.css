@@ -5,8 +5,10 @@
 .zm-schedule-page {
   display: flex;
   min-height: calc(100vh - var(--zm-header-height));
+  margin-top: var(--zm-header-height);
   background-color: #ffffff;
   color: #111827;
+  box-sizing: border-box;
 }
 
 .zm-schedule-sidebar {

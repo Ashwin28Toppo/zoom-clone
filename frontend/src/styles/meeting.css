@@ -14,8 +14,10 @@
 .zm-room-main-container {
   display: flex;
   flex: 1;
+  margin-top: var(--zm-header-height);
   overflow: hidden;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* ---------------- Left Sidebar (matching Image 1) ---------------- */

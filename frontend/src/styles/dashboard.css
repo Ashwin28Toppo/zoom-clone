@@ -51,8 +51,11 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
   z-index: 50;
 }
 
@@ -229,6 +232,9 @@ body {
 .zm-app-body {
   display: flex;
   min-height: calc(100vh - var(--zm-header-height));
+  padding-top: var(--zm-header-height);
+  padding-left: var(--zm-sidebar-width);
+  box-sizing: border-box;
 }
 
 /* ── Left Sidebar ─────────────────────────────────────────────────── */
@@ -239,12 +245,15 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 16px 0 16px;
   align-items: center;
-  position: sticky;
+  position: fixed;
+  left: 0;
   top: var(--zm-header-height);
+  bottom: 0;
   height: calc(100vh - var(--zm-header-height));
   box-sizing: border-box;
+  z-index: 40;
 }
 
 .zm-nav-list {
@@ -723,14 +732,15 @@ body {
 }
 
 /* ── Modals / Dialogs ─────────────────────────────────────────────── */
-.zm-modal-backdrop {
+/* ── Join Meeting Modal (Matching Image 1 Reference Screenshot) ── */
+.zm-join-modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: rgba(0, 0, 0, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
   backdrop-filter: blur(2px);
   animation: fadeIn 0.15s ease;
 }
@@ -739,88 +749,206 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
-.zm-modal-card {
-  background-color: var(--zm-bg-card);
-  border-radius: var(--zm-radius-xl);
-  box-shadow: var(--zm-shadow-lg);
+.zm-join-modal-card {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-radius: 20px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18);
   width: 100%;
   max-width: 440px;
-  padding: 28px;
+  padding: 24px 28px 20px;
   box-sizing: border-box;
   animation: slideUp 0.15s ease;
+  transition: all 0.2s ease;
+}
+
+.zm-join-modal-card.expanded {
+  padding: 24px 28px 20px;
 }
 
 @keyframes slideUp {
   from {
-    transform: translateY(12px);
+    transform: translateY(10px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-.zm-modal-title {
-  font-size: 20px;
+.zm-join-modal-title {
+  font-size: 19px;
   font-weight: 700;
-  color: var(--zm-text-primary);
-  margin-bottom: 20px;
+  color: #111827 !important;
+  margin: 0 0 16px;
+  text-align: left;
 }
 
-.zm-form-group {
+.zm-join-form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
 }
 
-.zm-form-label {
+.zm-join-form-label {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--zm-text-secondary);
+  font-weight: 400;
+  color: #555e6d !important;
+  text-align: left;
+  margin-bottom: 2px;
 }
 
-.zm-input {
+.zm-join-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 10px 14px;
+}
+
+.zm-join-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 38px 0 12px;
   font-size: 14px;
-  border: 1px solid var(--zm-border);
-  border-radius: var(--zm-radius-md);
+  border: 1px solid #d0d5dd !important;
+  border-radius: 8px;
+  background-color: #ffffff !important;
+  color: #111827 !important;
   outline: none;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.zm-join-input:focus {
+  border-color: #0e71eb !important;
+  box-shadow: 0 0 0 2px rgba(14, 113, 235, 0.18);
+}
+
+.zm-join-input.open {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-color: #e5e8ec !important;
+}
+
+.zm-join-input.error {
+  border-color: #e02828 !important;
+}
+
+.zm-join-caret-circle-btn {
+  position: absolute;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid #0e71eb;
+  background-color: #ffffff;
+  color: #0e71eb;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   transition: all 0.15s ease;
 }
 
-.zm-input:focus {
-  border-color: var(--zm-border-focus);
-  box-shadow: 0 0 0 2px rgba(14, 113, 235, 0.15);
+.zm-join-caret-circle-btn:hover {
+  background-color: #f2f7ff;
 }
 
-.zm-input-error {
-  border-color: var(--zm-danger);
+.zm-join-caret-circle-btn.active {
+  border-color: transparent;
+  color: #64748b;
+  background: none;
 }
 
-.zm-error-text {
+/* ── Contained History Dropdown inside Modal Flow (Image 2) ────────── */
+.zm-join-history-card-box {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.zm-join-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+  color: #18181b;
+}
+
+.zm-join-history-row.highlighted,
+.zm-join-history-row:hover {
+  background-color: #0e71eb;
+  color: #ffffff;
+}
+
+.zm-join-history-row.highlighted .zm-join-history-row-id,
+.zm-join-history-row:hover .zm-join-history-row-id {
+  color: #ffffff;
+}
+
+.zm-join-history-row-topic {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.zm-join-history-row-id {
+  font-size: 13px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.zm-join-history-row-clear {
+  padding: 9px 14px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0e71eb;
+  cursor: pointer;
+  text-align: left;
+}
+
+.zm-join-history-row-clear:hover {
+  text-decoration: underline;
+}
+
+.zm-join-error-text {
   font-size: 12px;
-  color: var(--zm-danger);
+  color: #e02828;
+  margin-top: 4px;
 }
 
-.zm-modal-footer {
+.zm-join-modal-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.zm-modal-btn {
-  padding: 8px 20px;
+.zm-join-btn-cancel {
+  background-color: #f2f7ff;
+  color: #0e71eb;
+  border: none;
+  padding: 7px 22px;
   border-radius: 18px;
   font-size: 13px;
   font-weight: 600;
@@ -828,29 +956,33 @@ body {
   transition: all 0.15s ease;
 }
 
-.zm-modal-btn.cancel {
-  background: none;
+.zm-join-btn-cancel:hover {
+  background-color: #e4efff;
+}
+
+.zm-join-btn-submit {
+  padding: 7px 24px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   border: none;
-  color: var(--zm-blue);
+  transition: all 0.15s ease;
 }
 
-.zm-modal-btn.cancel:hover {
-  background-color: #f4f6f8;
-}
-
-.zm-modal-btn.primary {
-  background-color: var(--zm-blue);
-  color: #ffffff;
-  border: none;
-}
-
-.zm-modal-btn.primary:hover:not(:disabled) {
-  background-color: var(--zm-blue-hover);
-}
-
-.zm-modal-btn.primary:disabled {
-  background-color: #c5d7ed;
+.zm-join-btn-submit:disabled {
+  background-color: #f1f3f5;
+  color: #adb5bd;
   cursor: not-allowed;
+}
+
+.zm-join-btn-submit:not(:disabled) {
+  background-color: #0e71eb;
+  color: #ffffff;
+}
+
+.zm-join-btn-submit:not(:disabled):hover {
+  background-color: #005ce6;
 }
 
 /* ── Responsive Behavior ─────────────────────────────────────────── */
