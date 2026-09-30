@@ -212,26 +212,28 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
     async function startMedia() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        if (!localStreamRef.current) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
 
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+          if (!active) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+
+          localStreamRef.current = stream;
         }
 
-        localStreamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        if (videoRef.current && localStreamRef.current) {
+          videoRef.current.srcObject = localStreamRef.current;
         }
 
-        stream.getAudioTracks().forEach((t) => {
+        localStreamRef.current.getAudioTracks().forEach((t) => {
           t.enabled = isAudioOn;
         });
-        stream.getVideoTracks().forEach((t) => {
+        localStreamRef.current.getVideoTracks().forEach((t) => {
           t.enabled = isVideoOn;
         });
 
@@ -257,9 +259,16 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       active = false;
       window.removeEventListener("beforeunload", handleUnload);
       window.removeEventListener("pagehide", handleUnload);
-      stopLocalMedia();
     };
-  }, [isAudioOn, isVideoOn, stopLocalMedia]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopLocalMedia]);
+
+  // Bind video element when video is toggled back on
+  useEffect(() => {
+    if (isVideoOn && videoRef.current && localStreamRef.current) {
+      videoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [isVideoOn]);
 
   // 4. Toggle Audio
   async function handleToggleAudio() {
@@ -381,7 +390,8 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   // 10. Copy Invite Link
   function copyInviteLink() {
-    const inviteUrl = meeting?.invite_link || (typeof window !== "undefined" ? window.location.href : "");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const inviteUrl = `${origin}/meeting/${meetingId}/prejoin`;
     navigator.clipboard.writeText(inviteUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);

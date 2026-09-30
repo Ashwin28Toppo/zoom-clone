@@ -248,24 +248,30 @@ export default function ScheduleMeetingPage() {
                     required
                   />
                   <select
+                    id="sched-time-select"
                     className="zm-sched-select"
+                    style={{ maxHeight: 220, overflowY: "auto" }}
                     value={timeHour}
                     onChange={(e) => setTimeHour(e.target.value)}
                   >
-                    <option value="1:00">1:00</option>
-                    <option value="1:30">1:30</option>
-                    <option value="2:00">2:00</option>
-                    <option value="2:30">2:30</option>
-                    <option value="3:00">3:00</option>
-                    <option value="4:00">4:00</option>
-                    <option value="5:00">5:00</option>
-                    <option value="6:00">6:00</option>
-                    <option value="7:00">7:00</option>
-                    <option value="8:00">8:00</option>
-                    <option value="9:00">9:00</option>
-                    <option value="10:00">10:00</option>
-                    <option value="11:00">11:00</option>
-                    <option value="12:00">12:00</option>
+                    {[
+                      "12:00", "12:15", "12:30", "12:45",
+                      "1:00", "1:15", "1:30", "1:45",
+                      "2:00", "2:15", "2:30", "2:45",
+                      "3:00", "3:15", "3:30", "3:45",
+                      "4:00", "4:15", "4:30", "4:45",
+                      "5:00", "5:15", "5:30", "5:45",
+                      "6:00", "6:15", "6:30", "6:45",
+                      "7:00", "7:15", "7:30", "7:45",
+                      "8:00", "8:15", "8:30", "8:45",
+                      "9:00", "9:15", "9:30", "9:45",
+                      "10:00", "10:15", "10:30", "10:45",
+                      "11:00", "11:15", "11:30", "11:45"
+                    ].map((timeOpt) => (
+                      <option key={timeOpt} value={timeOpt}>
+                        {timeOpt}
+                      </option>
+                    ))}
                   </select>
                   <select
                     className="zm-sched-select"
@@ -374,11 +380,12 @@ export default function ScheduleMeetingPage() {
                   value={invitees}
                   onChange={(e) => setInvitees(e.target.value)}
                 />
-                <div className="zm-notice-box">
-                  <span className="zm-notice-icon">⚠</span>
+                <div className="zm-notice-box" style={{ backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" }}>
+                  <span className="zm-notice-icon" style={{ color: "#16a34a" }}>✓</span>
                   <div>
-                    <span>Participants won&apos;t receive this meeting invite until your calendar is connected.</span>
-                    <span className="zm-notice-link">Connect calendar</span>
+                    <span style={{ color: "#15803d", fontWeight: 500 }}>
+                      Direct Invites Enabled: Participants will receive meeting invitations automatically via link or email without connecting a calendar.
+                    </span>
                   </div>
                 </div>
               </div>

@@ -102,15 +102,13 @@ export default function MeetingList({ refreshTrigger }: MeetingListProps) {
   return (
     <div className="zm-meetings-card">
       {/* Calendar Notice Banner */}
-      <div className="zm-calendar-banner">
-        <svg className="zm-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
+      <div className="zm-calendar-banner" style={{ backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" }}>
+        <svg className="zm-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
-        <span className="zm-banner-text">
-          You haven&apos;t connected your calendar yet.{" "}
-          <span className="zm-banner-link">Connect now</span> to manage all your meetings and events in one place.
+        <span className="zm-banner-text" style={{ color: "#15803d" }}>
+          Direct meeting links & instant invites are active. Participants can join directly via link or Meeting ID.
         </span>
       </div>
 
