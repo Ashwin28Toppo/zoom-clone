@@ -37,6 +37,7 @@ function RemoteParticipantTile({
 }: RemoteParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const attachVideo = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -45,7 +46,9 @@ function RemoteParticipantTile({
         if (el.srcObject !== stream) {
           el.srcObject = stream;
         }
-        el.play().catch(() => {});
+        el.play()
+          .then(() => setIsVideoPlaying(true))
+          .catch(() => setIsVideoPlaying(false));
       }
     },
     [stream]
@@ -69,7 +72,12 @@ function RemoteParticipantTile({
       if (videoRef.current.srcObject !== stream) {
         videoRef.current.srcObject = stream;
       }
-      videoRef.current.play().catch(() => {});
+      videoRef.current
+        .play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => setIsVideoPlaying(false));
+    } else {
+      setIsVideoPlaying(false);
     }
     if (audioRef.current && stream) {
       if (audioRef.current.srcObject !== stream) {
@@ -81,8 +89,9 @@ function RemoteParticipantTile({
 
   const hasLiveVideo = Boolean(
     stream &&
-      (stream.getVideoTracks().length > 0) &&
-      participant.is_video_on
+      stream.getVideoTracks().length > 0 &&
+      participant.is_video_on &&
+      isVideoPlaying
   );
 
   return (
@@ -95,6 +104,8 @@ function RemoteParticipantTile({
         ref={attachVideo}
         autoPlay
         playsInline
+        onPlaying={() => setIsVideoPlaying(true)}
+        onPause={() => setIsVideoPlaying(false)}
         className="zm-video-element"
         style={{ display: hasLiveVideo ? "block" : "none" }}
       />
