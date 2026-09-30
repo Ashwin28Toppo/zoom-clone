@@ -146,3 +146,67 @@ export async function joinMeeting(
     }),
   });
 }
+
+/** Leave a meeting */
+export async function leaveMeeting(
+  meetingId: string,
+  participantId: number
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    `/api/meetings/${encodeURIComponent(meetingId)}/leave?participant_id=${participantId}`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+/** Update participant audio/video states */
+export async function updateParticipantMedia(
+  meetingId: string,
+  participantId: number,
+  payload: { is_audio_on?: boolean; is_video_on?: boolean }
+): Promise<Participant> {
+  return request<Participant>(
+    `/api/meetings/${encodeURIComponent(meetingId)}/participants/${participantId}/media`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/** Mute all participants (host control) */
+export async function muteAllParticipants(meetingId: string): Promise<Participant[]> {
+  return request<Participant[]>(`/api/meetings/${encodeURIComponent(meetingId)}/mute-all`, {
+    method: "POST",
+  });
+}
+
+/** Remove participant from meeting (host control) */
+export async function removeParticipant(
+  meetingId: string,
+  participantId: number
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    `/api/meetings/${encodeURIComponent(meetingId)}/participants/${participantId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+/** End meeting for all participants */
+export async function endMeeting(meetingId: string): Promise<Meeting> {
+  return request<Meeting>(`/api/meetings/${encodeURIComponent(meetingId)}/end`, {
+    method: "PUT",
+  });
+}
+
+/** Get all active participants in a meeting */
+export async function getParticipants(meetingId: string): Promise<Participant[]> {
+  return request<Participant[]>(`/api/meetings/${encodeURIComponent(meetingId)}/participants`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
