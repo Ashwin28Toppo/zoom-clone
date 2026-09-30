@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect, useRef, useTransition } from "react";
+import React, { use, useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -75,27 +75,54 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
     };
   }, [meetingId]);
 
+  const attachVideo = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && streamRef.current) {
+      if (el.srcObject !== streamRef.current) {
+        el.srcObject = streamRef.current;
+      }
+      el.play().catch(() => {});
+    }
+  }, []);
+
   // 2. Request Camera & Microphone for Preview
   useEffect(() => {
     let active = true;
 
     async function setupMedia() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+        } catch {
+          // Fallback to video-only if combined fails
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch {
+            // Permission denied or camera unavailable
+          }
+        }
 
         if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
+          if (stream) stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        if (stream) {
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play().catch(() => {});
+          }
+          setMediaPermissionDenied(false);
+          setIsVideoOn(true);
+        } else {
+          setMediaPermissionDenied(true);
+          setIsVideoOn(false);
         }
-        setMediaPermissionDenied(false);
       } catch {
         if (active) {
           setMediaPermissionDenied(true);
@@ -227,15 +254,16 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
           <div className="zm-prejoin-content">
             {/* Left: Video Preview matching input_file_3.png */}
             <div className="zm-preview-container">
-              {isVideoOn && !mediaPermissionDenied ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="zm-preview-video"
-                />
-              ) : (
+              <video
+                ref={attachVideo}
+                autoPlay
+                playsInline
+                muted
+                className="zm-preview-video"
+                style={{ display: isVideoOn && !mediaPermissionDenied ? "block" : "none" }}
+              />
+
+              {(!isVideoOn || mediaPermissionDenied) && (
                 <div className="zm-preview-avatar-fallback">
                   <div className="zm-preview-avatar">
                     {displayName.trim() ? displayName.trim().charAt(0).toUpperCase() : "U"}

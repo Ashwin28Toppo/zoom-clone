@@ -163,6 +163,16 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
+  const attachLocalVideo = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && localStreamRef.current) {
+      if (el.srcObject !== localStreamRef.current) {
+        el.srcObject = localStreamRef.current;
+      }
+      el.play().catch(() => {});
+    }
+  }, []);
+
   // UI Control State
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isShieldOpen, setIsShieldOpen] = useState(false);
@@ -749,15 +759,16 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             <div className={`zm-grid ${gridClass}`}>
               {/* Local User Tile */}
               <div className="zm-video-tile">
-                {isVideoOn && !mediaPermissionDenied ? (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="zm-video-element"
-                  />
-                ) : (
+                <video
+                  ref={attachLocalVideo}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="zm-video-element"
+                  style={{ display: isVideoOn && !mediaPermissionDenied ? "block" : "none" }}
+                />
+
+                {(!isVideoOn || mediaPermissionDenied) && (
                   <div className="zm-tile-avatar-view">
                     <div className="zm-tile-avatar">
                       {currentParticipant?.display_name
