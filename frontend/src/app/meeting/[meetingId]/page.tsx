@@ -406,8 +406,9 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   const isHost =
     currentParticipant?.role === "host" ||
-    meeting?.host_name === currentParticipant?.display_name ||
-    meeting?.host_name === "Ashwin Toppo";
+    (Boolean(meeting?.host_name) &&
+      Boolean(currentParticipant?.display_name) &&
+      currentParticipant?.display_name?.trim().toLowerCase() === meeting?.host_name?.trim().toLowerCase());
 
   const filteredParticipants = participants.filter((p) =>
     p.display_name.toLowerCase().includes(participantSearch.toLowerCase())
@@ -725,8 +726,8 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                       {currentParticipant?.display_name?.charAt(0).toUpperCase() || "A"}
                     </div>
                     <div className="zm-participant-name">
-                      {currentParticipant?.display_name || "Ashwin Toppo"}
-                      <span className="zm-participant-tags"> (Host, me)</span>
+                      {currentParticipant?.display_name || "Guest"}
+                      <span className="zm-participant-tags"> {isHost ? "(Host, me)" : "(Me)"}</span>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -944,20 +945,22 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 <span>Share</span>
               </button>
 
-              {/* Host tools */}
-              <button
-                type="button"
-                className="zm-dock-item"
-                onClick={() => setIsShieldOpen((prev) => !prev)}
-              >
-                <div className="zm-dock-item-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                  <span className="zm-dock-caret">⌃</span>
-                </div>
-                <span>Host tools</span>
-              </button>
+              {/* Host tools (Host only) */}
+              {isHost && (
+                <button
+                  type="button"
+                  className="zm-dock-item"
+                  onClick={() => setIsShieldOpen((prev) => !prev)}
+                >
+                  <div className="zm-dock-item-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span className="zm-dock-caret">⌃</span>
+                  </div>
+                  <span>Host tools</span>
+                </button>
+              )}
 
               {/* More */}
               <button
@@ -976,7 +979,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </button>
             </div>
 
-            {/* Right: End matching Image 1 */}
+            {/* Right: End/Leave button matching Image 1 */}
             <div className="zm-dock-right">
               <button
                 type="button"
@@ -984,7 +987,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 onClick={() => setIsEndModalOpen(true)}
               >
                 <div className="zm-end-circle-icon">✕</div>
-                <span>End</span>
+                <span>{isHost ? "End" : "Leave"}</span>
               </button>
             </div>
           </footer>
@@ -996,7 +999,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         <div className="zm-modal-backdrop" onClick={() => setIsEndModalOpen(false)}>
           <div className="zm-modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="zm-modal-title">
-              {isHost ? "End Meeting or Leave?" : "Leave Meeting?"}
+              {isHost ? "End Meeting or Leave?" : "Leave Meeting"}
             </h2>
             <p className="zm-modal-desc">
               {isHost
@@ -1004,22 +1007,32 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 : "Are you sure you want to leave this meeting?"}
             </p>
             <div className="zm-modal-actions">
-              {isHost && (
+              {isHost ? (
+                <>
+                  <button
+                    type="button"
+                    className="zm-modal-btn danger"
+                    onClick={handleEndMeeting}
+                  >
+                    End Meeting for All
+                  </button>
+                  <button
+                    type="button"
+                    className="zm-modal-btn secondary"
+                    onClick={handleLeaveMeeting}
+                  >
+                    Leave Meeting
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   className="zm-modal-btn danger"
-                  onClick={handleEndMeeting}
+                  onClick={handleLeaveMeeting}
                 >
-                  End Meeting for All
+                  Leave Meeting
                 </button>
               )}
-              <button
-                type="button"
-                className="zm-modal-btn secondary"
-                onClick={handleLeaveMeeting}
-              >
-                Leave Meeting
-              </button>
               <button
                 type="button"
                 className="zm-modal-btn cancel"
