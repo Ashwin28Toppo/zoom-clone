@@ -284,7 +284,12 @@ export function useWebRTC(
       const senders = pc.getSenders();
 
       localStream.getTracks().forEach((track) => {
-        const sender = senders.find((s) => s.track?.kind === track.kind);
+        const sender = senders.find((s) => {
+          if (s.track?.kind === track.kind) return true;
+          const transceiver = pc.getTransceivers().find((t) => t.sender === s);
+          return transceiver?.receiver.track.kind === track.kind;
+        });
+
         if (sender) {
           sender.replaceTrack(track).catch(() => {});
         } else {

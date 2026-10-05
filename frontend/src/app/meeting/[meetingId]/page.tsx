@@ -88,18 +88,19 @@ function RemoteParticipantTile({
     }
   }, [stream, participant.is_video_on]);
 
-  const hasLiveVideo = Boolean(
+  const hasLiveTrack = Boolean(
     stream &&
-    stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live") &&
-    (participant.is_video_on || isVideoPlaying)
+    stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live")
   );
 
+  const showVideo = hasLiveTrack && (participant.is_video_on || isVideoPlaying);
+
   return (
-    <div className="zm-video-tile">
+    <div className="zm-video-tile" style={{ position: "relative", overflow: "hidden" }}>
       {/* Remote Audio output to hear their voice */}
       <audio ref={attachAudio} autoPlay playsInline />
 
-      {/* Remote Video output */}
+      {/* Remote Video output - ALWAYS in DOM layout so play() & onPlaying work */}
       <video
         ref={attachVideo}
         autoPlay
@@ -107,18 +108,34 @@ function RemoteParticipantTile({
         onPlaying={() => setIsVideoPlaying(true)}
         onPause={() => setIsVideoPlaying(false)}
         className="zm-video-element"
-        style={{ display: hasLiveVideo ? "block" : "none" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          display: "block",
+        }}
       />
 
-      {!hasLiveVideo && (
-        <div className="zm-tile-avatar-view">
+      {!showVideo && (
+        <div
+          className="zm-tile-avatar-view"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 2,
+            backgroundColor: "#11161f",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <div className={`zm-tile-avatar alt-${(index % 4) + 1}`}>
             {participant.display_name.charAt(0).toUpperCase()}
           </div>
         </div>
       )}
 
-      <div className="zm-tile-nametag">
+      <div className="zm-tile-nametag" style={{ zIndex: 3 }}>
         {!participant.is_audio_on ? (
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
             <line x1="1" y1="1" x2="23" y2="23" />
@@ -133,11 +150,12 @@ function RemoteParticipantTile({
       </div>
 
       {isHost && (
-        <div className="zm-tile-hover-actions">
+        <div className="zm-tile-hover-actions" style={{ zIndex: 4 }}>
           <button
             type="button"
             className="zm-tile-action-btn danger"
             onClick={() => onRemove(participant.id)}
+            title="Remove participant"
           >
             Remove
           </button>
@@ -276,7 +294,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
 
     setIsSharingScreen(false);
-  }, [isVideoOn]);
+
+    if (currentParticipant?.id) {
+      updateParticipantMedia(meetingId, currentParticipant.id, {
+        is_video_on: isVideoOn,
+      }).catch(() => {});
+    }
+  }, [isVideoOn, currentParticipant, meetingId]);
 
   // Toggle Screen Sharing
   async function handleToggleScreenShare() {
@@ -320,6 +344,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         }
 
         setIsSharingScreen(true);
+
+        if (currentParticipant?.id) {
+          updateParticipantMedia(meetingId, currentParticipant.id, {
+            is_video_on: true,
+          }).catch(() => {});
+        }
       } catch {
         // User cancelled browser dialog or permission denied
       }
