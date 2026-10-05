@@ -182,7 +182,6 @@ export default function MeetingsListPage() {
                   Ashwin Toppo is inviting you to a scheduled Zoom meeting.{"\n"}
                   Topic: My Personal Meeting ID (PMI){"\n"}
                   Meeting ID: {pmi}{"\n"}
-                  Passcode: 123456{"\n"}
                   One tap mobile: +16465588656,,{pmi.replace(/\s/g, "")}#
                 </div>
               )}

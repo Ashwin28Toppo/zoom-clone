@@ -61,7 +61,7 @@ function RemoteParticipantTile({
         if (el.srcObject !== stream) {
           el.srcObject = stream;
         }
-        el.play().catch(() => {});
+        el.play().catch(() => { });
       }
     },
     [stream]
@@ -83,15 +83,15 @@ function RemoteParticipantTile({
       if (audioRef.current.srcObject !== stream) {
         audioRef.current.srcObject = stream;
       }
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch(() => { });
     }
   }, [stream, participant.is_video_on]);
 
   const hasLiveVideo = Boolean(
     stream &&
-      stream.getVideoTracks().length > 0 &&
-      participant.is_video_on &&
-      isVideoPlaying
+    stream.getVideoTracks().length > 0 &&
+    participant.is_video_on &&
+    isVideoPlaying
   );
 
   return (
@@ -180,7 +180,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       if (el.srcObject !== localStreamRef.current) {
         el.srcObject = localStreamRef.current;
       }
-      el.play().catch(() => {});
+      el.play().catch(() => { });
     }
   }, []);
 
@@ -575,10 +575,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     totalTiles === 1
       ? "zm-grid-1"
       : totalTiles === 2
-      ? "zm-grid-2"
-      : totalTiles <= 4
-      ? "zm-grid-4"
-      : "zm-grid-multi";
+        ? "zm-grid-2"
+        : totalTiles <= 4
+          ? "zm-grid-4"
+          : "zm-grid-multi";
 
   if (isLoading) {
     return (
@@ -738,10 +738,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 <div className="zm-shield-row">
                   <span className="zm-shield-row-label">Host</span>
                   <span className="zm-shield-row-value">{meeting?.host_name}</span>
-                </div>
-                <div className="zm-shield-row">
-                  <span className="zm-shield-row-label">Passcode</span>
-                  <span className="zm-shield-row-value">123456</span>
                 </div>
                 <button type="button" className="zm-copy-link-btn" onClick={copyInviteLink}>
                   {copiedLink ? "✓ Invite Link Copied!" : "Copy Invite Link"}

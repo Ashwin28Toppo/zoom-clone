@@ -67,8 +67,8 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
       try {
         const errorData = await res.json();
         if (errorData.detail) {
-          errorMessage = typeof errorData.detail === "string" 
-            ? errorData.detail 
+          errorMessage = typeof errorData.detail === "string"
+            ? errorData.detail
             : JSON.stringify(errorData.detail);
         }
       } catch {

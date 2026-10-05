@@ -25,8 +25,7 @@ export default function ScheduleMeetingPage() {
   const [durationHours, setDurationHours] = useState("0");
   const [durationMins, setDurationMins] = useState("40");
   const [timezone, setTimezone] = useState("(GMT-7:00) Pacific Time (US and Canada)");
-  const [passcode, setPasscode] = useState("CB8xDM");
-  const [enablePasscode, setEnablePasscode] = useState(true);
+
   const [hostVideo, setHostVideo] = useState<"on" | "off">("off");
   const [participantVideo, setParticipantVideo] = useState<"on" | "off">("off");
 
@@ -269,32 +268,6 @@ export default function ScheduleMeetingPage() {
               </div>
             </div>
 
-            {/* Security Field - Optional Passcode */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Security</label>
-              <div className="zm-form-row-content">
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <label className="zm-checkbox-option">
-                    <input
-                      type="checkbox"
-                      checked={enablePasscode}
-                      onChange={(e) => setEnablePasscode(e.target.checked)}
-                    />
-                    <span>Passcode</span>
-                  </label>
-                  {enablePasscode && (
-                    <input
-                      type="text"
-                      className="zm-sched-input"
-                      style={{ maxWidth: 160 }}
-                      value={passcode}
-                      onChange={(e) => setPasscode(e.target.value)}
-                      placeholder="Enter passcode"
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
 
             {/* Video Settings Field */}
             <div className="zm-form-row">

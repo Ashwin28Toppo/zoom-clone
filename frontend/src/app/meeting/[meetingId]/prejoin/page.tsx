@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect, useRef, useTransition, useCallback } from "react";
+import React, { use, useState, useEffect, useRef, useTransition, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -12,9 +12,7 @@ interface PrejoinPageProps {
   params: Promise<{ meetingId: string }>;
 }
 
-export default function PrejoinPage({ params }: PrejoinPageProps) {
-  const resolvedParams = use(params);
-  const meetingId = resolvedParams.meetingId;
+function PrejoinContent({ meetingId }: { meetingId: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -23,10 +21,8 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
   const [isLoadingMeeting, setIsLoadingMeeting] = useState(true);
   const [meetingError, setMeetingError] = useState<string | null>(null);
 
-  // Form State
+  // Pre-join Form State
   const [displayName, setDisplayName] = useState("Ashwin Toppo");
-  const [passcode, setPasscode] = useState("CB8xDM");
-  const [showPasscode, setShowPasscode] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -38,7 +34,7 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const isJoiningRef = useRef(false);
 
-  // 1. Fetch & Validate Meeting
+  // 1. Fetch Meeting
   useEffect(() => {
     let isMounted = true;
 
@@ -46,15 +42,18 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
       try {
         setIsLoadingMeeting(true);
         setMeetingError(null);
+
         const data = await getMeetingById(meetingId);
-        if (isMounted) {
-          if (data.status === "ended") {
-            setMeetingError("This meeting has already ended.");
-          } else {
-            setMeeting(data);
-          }
+        if (!isMounted) return;
+
+        if (data.status === "ended") {
+          setMeetingError("This meeting has already ended.");
           setIsLoadingMeeting(false);
+          return;
         }
+
+        setMeeting(data);
+        setIsLoadingMeeting(false);
       } catch (err: unknown) {
         if (isMounted) {
           const msg = err instanceof Error ? err.message : "Meeting not found";
@@ -69,12 +68,10 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
     }
 
     loadMeeting();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [meetingId]);
 
+  // 2. Request Media Preview
   const attachVideo = useCallback((el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el && streamRef.current) {
@@ -85,24 +82,21 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
     }
   }, []);
 
-  // 2. Request Camera & Microphone for Preview
   useEffect(() => {
+    if (isLoadingMeeting || meetingError) return;
+
     let active = true;
 
     async function setupMedia() {
       try {
         let stream: MediaStream | null = null;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          });
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         } catch {
-          // Fallback to video-only if combined fails
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           } catch {
-            // Permission denied or camera unavailable
+            stream = null;
           }
         }
 
@@ -118,15 +112,16 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
             videoRef.current.play().catch(() => {});
           }
           setMediaPermissionDenied(false);
-          setIsVideoOn(true);
         } else {
           setMediaPermissionDenied(true);
           setIsVideoOn(false);
+          setIsAudioOn(false);
         }
       } catch {
         if (active) {
           setMediaPermissionDenied(true);
           setIsVideoOn(false);
+          setIsAudioOn(false);
         }
       }
     }
@@ -142,18 +137,16 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
     };
 
     window.addEventListener("beforeunload", cleanup);
-
     return () => {
       window.removeEventListener("beforeunload", cleanup);
       cleanup();
     };
-  }, []);
+  }, [isLoadingMeeting, meetingError]);
 
   // 3. Toggle Local Mic Track
   function toggleAudio() {
     if (streamRef.current) {
-      const audioTracks = streamRef.current.getAudioTracks();
-      audioTracks.forEach((track) => {
+      streamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = !isAudioOn;
       });
     }
@@ -163,15 +156,14 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
   // 4. Toggle Local Camera Track
   function toggleVideo() {
     if (streamRef.current) {
-      const videoTracks = streamRef.current.getVideoTracks();
-      videoTracks.forEach((track) => {
+      streamRef.current.getVideoTracks().forEach((track) => {
         track.enabled = !isVideoOn;
       });
     }
     setIsVideoOn((prev) => !prev);
   }
 
-  // 5. Handle Join Submit
+  // 5. Handle Final Join
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
     if (isJoiningRef.current) return;
@@ -185,14 +177,12 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
       setIsJoining(true);
       setJoinError(null);
 
-      // Call backend join API
       const participant = await joinMeeting(meetingId, {
         display_name: displayName.trim(),
         is_audio_on: isAudioOn,
         is_video_on: isVideoOn,
       });
 
-      // Save participant info and initial media states for the meeting room
       if (typeof window !== "undefined") {
         sessionStorage.setItem(`zoom_participant_${meetingId}`, JSON.stringify(participant));
         sessionStorage.setItem(
@@ -201,13 +191,12 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
         );
       }
 
-      // Stop local preview stream before entering room
+      // Stop preview stream before entering room
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
 
-      // Navigate to the Meeting Room
       startTransition(() => {
         router.push(`/meeting/${meetingId}`);
       });
@@ -221,38 +210,30 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
 
   return (
     <div className="zm-prejoin-page">
-      <Navbar />
+      <Navbar variant="portal" />
 
       <div className="zm-prejoin-body">
         <Link href="/dashboard" className="zm-prejoin-back">
-          ‹ Back
+          ‹ Back to Dashboard
         </Link>
 
         {isLoadingMeeting ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div className="zm-prejoin-center-msg">
-              <div className="zm-spinner" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#0e71eb" }} />
-              <div style={{ fontSize: 16, fontWeight: 600 }}>Connecting to meeting...</div>
-            </div>
+          <div className="zm-prejoin-center-msg">
+            <span style={{ fontSize: 18, color: "#8c93a0" }}>Loading meeting information...</span>
           </div>
         ) : meetingError ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div className="zm-prejoin-center-msg">
-              <div style={{ fontSize: 36 }}>⚠</div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Unable to Join Meeting</h2>
-              <p style={{ color: "#a0aec0", fontSize: 14, margin: "4px 0 16px" }}>{meetingError}</p>
-              <Link
-                href="/dashboard"
-                className="zm-pill-btn primary"
-                style={{ textDecoration: "none", padding: "8px 24px" }}
-              >
-                Return to Dashboard
-              </Link>
-            </div>
+          <div className="zm-prejoin-center-msg">
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⚠</div>
+            <h2 style={{ fontSize: 22, color: "#ffffff", margin: "0 0 8px 0" }}>Cannot Join Meeting</h2>
+            <p style={{ color: "#a0aec0", maxWidth: 440, margin: "0 0 20px 0" }}>{meetingError}</p>
+            <Link href="/dashboard" className="zm-prejoin-btn-join" style={{ textDecoration: "none", display: "inline-block", width: "auto", padding: "10px 24px" }}>
+              Back to Dashboard
+            </Link>
           </div>
         ) : (
+          /* Pre-Join Lobby */
           <div className="zm-prejoin-content">
-            {/* Left: Video Preview matching input_file_3.png */}
+            {/* Left: Video Preview */}
             <div className="zm-preview-container">
               <video
                 ref={attachVideo}
@@ -274,9 +255,8 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
                 </div>
               )}
 
-              {/* Floating Bottom Toolbar on Preview Card */}
+              {/* Floating Toolbar on Preview Card */}
               <div className="zm-preview-toolbar">
-                {/* Mic Toggle Button */}
                 <button
                   type="button"
                   className={`zm-preview-btn ${!isAudioOn ? "muted" : ""}`}
@@ -303,7 +283,6 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
                   <span>{isAudioOn ? "Mute" : "Unmute"}</span>
                 </button>
 
-                {/* Video Toggle Button */}
                 <button
                   type="button"
                   className={`zm-preview-btn ${!isVideoOn ? "muted" : ""}`}
@@ -324,27 +303,12 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
                   )}
                   <span>{isVideoOn ? "Stop Video" : "Start Video"}</span>
                 </button>
-
-                {/* Backgrounds pill */}
-                <button
-                  type="button"
-                  className="zm-preview-btn bg-btn"
-                  title="Virtual Backgrounds"
-                  onClick={() => alert("Virtual Background filter active.")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                  <span>Backgrounds</span>
-                </button>
               </div>
             </div>
 
-            {/* Right: Meeting Info & Join Box matching input_file_3.png */}
+            {/* Right: Meeting Info & Join Box */}
             <div className="zm-prejoin-form-card">
-              <h1 className="zm-prejoin-title">Enter Meeting Info</h1>
+              <h1 className="zm-prejoin-title">Ready to Join</h1>
 
               {joinError && (
                 <div className="zm-prejoin-error-box">
@@ -360,53 +324,6 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
                   </div>
                   <div style={{ fontSize: 12, color: "#8c93a0" }}>
                     Meeting ID: <code style={{ color: "#2d8cff", fontWeight: 700 }}>{meeting?.meeting_id}</code>
-                  </div>
-                </div>
-
-                {/* Meeting Passcode */}
-                <div className="zm-prejoin-group">
-                  <label className="zm-prejoin-label" htmlFor="input-passcode">
-                    Meeting Passcode
-                  </label>
-                  <div style={{ position: "relative", display: "flex", alignItems: "center", width: "100%" }}>
-                    <input
-                      id="input-passcode"
-                      type={showPasscode ? "text" : "password"}
-                      className="zm-prejoin-input"
-                      style={{ paddingRight: 40 }}
-                      value={passcode}
-                      onChange={(e) => setPasscode(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="zm-passcode-eye-btn"
-                      onClick={() => setShowPasscode((prev) => !prev)}
-                      title={showPasscode ? "Hide passcode" : "Show passcode"}
-                      style={{
-                        position: "absolute",
-                        right: 10,
-                        background: "none",
-                        border: "none",
-                        color: "#8c93a0",
-                        cursor: "pointer",
-                        padding: 4,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {showPasscode ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
                   </div>
                 </div>
 
@@ -441,9 +358,18 @@ export default function PrejoinPage({ params }: PrejoinPageProps) {
 
         {/* Footer */}
         <footer className="zm-prejoin-footer">
-          © 2026 Zoom Communications, Inc. All rights reserved. Privacy & Legal Policies | Send Report
+          © 2026 Zoom Communications, Inc. All rights reserved.
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function PrejoinPage({ params }: PrejoinPageProps) {
+  const resolvedParams = use(params);
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", backgroundColor: "#121417" }} />}>
+      <PrejoinContent meetingId={resolvedParams.meetingId} />
+    </Suspense>
   );
 }
