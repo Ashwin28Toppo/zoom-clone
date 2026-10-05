@@ -93,7 +93,7 @@ function RemoteParticipantTile({
     stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live")
   );
 
-  const showVideo = hasLiveTrack && (participant.is_video_on || isVideoPlaying);
+  const showVideo = hasLiveTrack;
 
   return (
     <div className="zm-video-tile" style={{ position: "relative", overflow: "hidden" }}>
@@ -315,6 +315,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
         const screenTrack = displayStream.getVideoTracks()[0];
         if (!screenTrack) return;
+
+        if ("contentHint" in screenTrack) {
+          (screenTrack as unknown as { contentHint: string }).contentHint = "motion";
+        }
 
         screenTrackRef.current = screenTrack;
 
