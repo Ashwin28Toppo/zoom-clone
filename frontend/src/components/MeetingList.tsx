@@ -75,7 +75,8 @@ export default function MeetingList({ refreshTrigger }: MeetingListProps) {
   function handleCopyInvite(meetingId: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const inviteUrl = `${origin}/meeting/${meetingId}/prejoin`;
-    navigator.clipboard.writeText(inviteUrl);
+    const inviteText = `Join Zoom Meeting\nMeeting ID: ${meetingId}\nLink: ${inviteUrl}`;
+    navigator.clipboard.writeText(inviteText);
     setCopiedId(meetingId);
     setTimeout(() => setCopiedId(null), 2000);
   }

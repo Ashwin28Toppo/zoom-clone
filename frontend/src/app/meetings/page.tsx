@@ -60,7 +60,8 @@ export default function MeetingsListPage() {
   }
 
   function handleCopyInvite() {
-    const inviteText = `Ashwin Toppo is inviting you to a scheduled Zoom meeting.\n\nTopic: My Personal Meeting ID (PMI)\nMeeting ID: ${pmi}\nJoin URL: ${window.location.origin}/dashboard`;
+    const inviteUrl = `${window.location.origin}/meeting/${pmi}/prejoin`;
+    const inviteText = `Ashwin Toppo is inviting you to a scheduled Zoom meeting.\n\nTopic: My Personal Meeting ID (PMI)\nMeeting ID: ${pmi}\nJoin Link: ${inviteUrl}`;
     navigator.clipboard.writeText(inviteText);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);

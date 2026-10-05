@@ -550,7 +550,8 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   function copyInviteLink() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const inviteUrl = `${origin}/meeting/${meetingId}/prejoin`;
-    navigator.clipboard.writeText(inviteUrl);
+    const inviteText = `Join Zoom Meeting\nMeeting ID: ${meetingId}\nLink: ${inviteUrl}`;
+    navigator.clipboard.writeText(inviteText);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   }
