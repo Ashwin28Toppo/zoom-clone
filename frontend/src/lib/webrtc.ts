@@ -114,7 +114,7 @@ export function useWebRTC(
               if (event.track && !existing.getTracks().some((t) => t.id === event.track.id)) {
                 existing.addTrack(event.track);
               }
-              next.set(peerId, existing);
+              next.set(peerId, new MediaStream(existing.getTracks()));
             } else {
               next.set(peerId, finalStream);
             }
