@@ -176,30 +176,37 @@ export async function updateParticipantMedia(
 }
 
 /** Mute all participants (host control) */
-export async function muteAllParticipants(meetingId: string): Promise<Participant[]> {
-  return request<Participant[]>(`/api/meetings/${encodeURIComponent(meetingId)}/mute-all`, {
-    method: "POST",
-  });
+export async function muteAllParticipants(
+  meetingId: string,
+  requesterParticipantId: number
+): Promise<Participant[]> {
+  return request<Participant[]>(
+    `/api/meetings/${encodeURIComponent(meetingId)}/mute-all?requester_id=${requesterParticipantId}`,
+    { method: "POST" }
+  );
 }
 
 /** Remove participant from meeting (host control) */
 export async function removeParticipant(
   meetingId: string,
-  participantId: number
+  participantId: number,
+  requesterParticipantId: number
 ): Promise<{ message: string }> {
   return request<{ message: string }>(
-    `/api/meetings/${encodeURIComponent(meetingId)}/participants/${participantId}`,
-    {
-      method: "DELETE",
-    }
+    `/api/meetings/${encodeURIComponent(meetingId)}/participants/${participantId}?requester_id=${requesterParticipantId}`,
+    { method: "DELETE" }
   );
 }
 
-/** End meeting for all participants */
-export async function endMeeting(meetingId: string): Promise<Meeting> {
-  return request<Meeting>(`/api/meetings/${encodeURIComponent(meetingId)}/end`, {
-    method: "PUT",
-  });
+/** End meeting for all participants (host only) */
+export async function endMeeting(
+  meetingId: string,
+  requesterParticipantId: number
+): Promise<Meeting> {
+  return request<Meeting>(
+    `/api/meetings/${encodeURIComponent(meetingId)}/end?requester_id=${requesterParticipantId}`,
+    { method: "PUT" }
+  );
 }
 
 /** Get all active participants in a meeting */

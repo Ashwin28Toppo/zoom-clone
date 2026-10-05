@@ -1002,39 +1002,199 @@ body {
 
 /* ── Responsive Behavior ─────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .zm-header-center {
-    display: none;
+  .zm-header {
+    padding: 0 12px;
   }
 
+  .zm-header-left {
+    gap: 8px;
+  }
+
+  .zm-brand-sub,
+  .zm-nav-arrows,
+  .zm-header-center,
   .zm-header-link,
   .zm-pill-btn {
-    display: none;
+    display: none !important;
+  }
+
+  .zm-app-body {
+    padding-left: 0 !important;
+    padding-bottom: 64px !important;
   }
 
   .zm-sidebar {
-    width: 54px;
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 56px !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 0 8px !important;
+    border-right: none !important;
+    border-top: 1px solid var(--zm-border) !important;
+    background-color: var(--zm-bg-card) !important;
+    z-index: 100 !important;
+  }
+
+  .zm-nav-list {
+    flex-direction: row !important;
+    gap: 0 !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+  }
+
+  .zm-nav-item {
+    width: auto !important;
+    padding: 4px 6px !important;
+    flex: 1 !important;
+  }
+
+  .zm-nav-item span {
+    font-size: 10px !important;
   }
 
   .zm-main-content {
-    padding: 20px 16px;
+    padding: 16px 12px 24px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .zm-clock-section {
+    margin-bottom: 20px !important;
+  }
+
+  .zm-clock-time {
+    font-size: 32px !important;
+  }
+
+  .zm-clock-date {
+    font-size: 13px !important;
   }
 
   .zm-action-row {
-    gap: 16px;
+    gap: 12px !important;
+    justify-content: space-evenly !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+  }
+
+  .zm-action-item {
+    min-width: 60px !important;
+  }
+
+  .zm-action-btn {
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 16px !important;
+  }
+
+  .zm-action-label {
+    font-size: 11px !important;
   }
 
   .zm-subactions-row {
-    flex-wrap: wrap;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: center !important;
+    margin-bottom: 20px !important;
+  }
+
+  .zm-subaction-pill {
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .zm-calendar-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 12px 14px !important;
+    gap: 8px !important;
+  }
+
+  .zm-meetings-card {
+    border-radius: var(--zm-radius-md) !important;
+  }
+
+  .zm-meetings-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+
+  .zm-tabs {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .zm-tab-btn {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .zm-meetings-actions {
+    justify-content: flex-end !important;
+    width: 100% !important;
+  }
+
+  .zm-meeting-list {
+    padding: 8px 10px !important;
   }
 
   .zm-meeting-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .zm-meeting-left {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .zm-meeting-time-box {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 10px !important;
+    min-width: 0 !important;
+  }
+
+  .zm-meeting-info {
+    width: 100% !important;
+  }
+
+  .zm-meeting-title {
+    font-size: 14px !important;
+    word-break: break-word !important;
+  }
+
+  .zm-meeting-meta {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    font-size: 11px !important;
   }
 
   .zm-meeting-right {
-    width: 100%;
-    justify-content: flex-end;
+    width: 100% !important;
+    justify-content: space-between !important;
+    border-top: 1px solid #f0f2f5 !important;
+    padding-top: 8px !important;
+  }
+
+  .zm-join-modal-card {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+    padding: 18px 16px !important;
   }
 }

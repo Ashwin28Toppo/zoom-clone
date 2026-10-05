@@ -265,8 +265,32 @@ def update_participant_media(
     return ParticipantResponse.model_validate(participant)
 
 
-def mute_all_participants(db: Session, meeting_id: str) -> list[ParticipantResponse]:
-    """Mute all active participants in a meeting (host control)."""
+def _get_active_participant(db: Session, meeting_id: str, participant_id: int) -> Participant | None:
+    """Fetch an active (not-left) participant by id within a meeting."""
+    return (
+        db.query(Participant)
+        .filter(
+            Participant.id == participant_id,
+            Participant.meeting_id == meeting_id,
+            Participant.left_at.is_(None),
+        )
+        .first()
+    )
+
+
+def _assert_host(db: Session, meeting_id: str, requester_id: int) -> Participant:
+    """Raise ValueError if requester is not an active host in this meeting."""
+    requester = _get_active_participant(db, meeting_id, requester_id)
+    if not requester:
+        raise ValueError("Requester is not an active participant in this meeting")
+    if requester.role != "host":
+        raise ValueError("Only the host is allowed to perform this action")
+    return requester
+
+
+def mute_all_participants(db: Session, meeting_id: str, requester_id: int) -> list[ParticipantResponse]:
+    """Mute all active participants in a meeting (host control only)."""
+    _assert_host(db, meeting_id, requester_id)
     participants = (
         db.query(Participant)
         .filter(
@@ -281,7 +305,22 @@ def mute_all_participants(db: Session, meeting_id: str) -> list[ParticipantRespo
     return [ParticipantResponse.model_validate(p) for p in participants]
 
 
-def remove_participant(db: Session, meeting_id: str, participant_id: int) -> bool:
-    """Remove a participant from the meeting (host control / kick)."""
+def remove_participant(db: Session, meeting_id: str, participant_id: int, requester_id: int) -> bool:
+    """Remove/kick a participant from the meeting.
+
+    Rules enforced:
+    - Only a host (requester_id must be an active host) may remove others.
+    - The host cannot be removed by anyone, including another host call.
+    - A participant cannot remove themselves via this endpoint (use leave_meeting).
+    """
+    _assert_host(db, meeting_id, requester_id)
+
+    # Prevent removing the host (self or otherwise)
+    target = _get_active_participant(db, meeting_id, participant_id)
+    if not target:
+        return False
+    if target.role == "host":
+        raise ValueError("The host cannot be removed from the meeting")
+
     return leave_meeting(db, meeting_id, participant_id)
 

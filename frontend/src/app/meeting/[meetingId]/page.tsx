@@ -479,9 +479,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   // 7. End Meeting for All
   async function handleEndMeeting() {
     if (isEndingRef.current) return;
+    if (!currentParticipant?.id) return;
     try {
       isEndingRef.current = true;
-      await endMeeting(meetingId);
+      await endMeeting(meetingId, currentParticipant.id);
       setIsMeetingEnded(true);
     } catch {
       // ignore
@@ -497,9 +498,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   // 8. Host Mute All
   async function handleMuteAll() {
     if (isActionPendingRef.current) return;
+    if (!currentParticipant?.id) return;
     try {
       isActionPendingRef.current = true;
-      const updated = await muteAllParticipants(meetingId);
+      const updated = await muteAllParticipants(meetingId, currentParticipant.id);
       setParticipants(updated);
       setIsAudioOn(false);
       if (localStreamRef.current) {
@@ -517,13 +519,15 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   // 9. Host Remove Participant
   async function handleRemoveParticipant(participantId: number) {
     if (isActionPendingRef.current) return;
+    if (!currentParticipant?.id) return;
     if (!confirm("Are you sure you want to remove this participant?")) return;
     try {
       isActionPendingRef.current = true;
-      await removeParticipant(meetingId, participantId);
+      await removeParticipant(meetingId, participantId, currentParticipant.id);
       setParticipants((prev) => prev.filter((p) => p.id !== participantId));
-    } catch {
-      alert("Failed to remove participant.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to remove participant.";
+      alert(msg);
     } finally {
       isActionPendingRef.current = false;
     }

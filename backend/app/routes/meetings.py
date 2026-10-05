@@ -103,28 +103,45 @@ def update_participant_media(
 @router.post("/{meeting_id}/mute-all", response_model=list[ParticipantResponse])
 def mute_all_participants(
     meeting_id: str,
+    requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
     db: Session = Depends(get_db),
 ):
-    """Mute all active participants in a meeting (host control)."""
-    return meeting_service.mute_all_participants(db, meeting_id)
+    """Mute all active participants in a meeting (host control only)."""
+    try:
+        return meeting_service.mute_all_participants(db, meeting_id, requester_id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 @router.delete("/{meeting_id}/participants/{participant_id}")
 def remove_participant(
     meeting_id: str,
     participant_id: int,
+    requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
     db: Session = Depends(get_db),
 ):
-    """Remove/kick a participant from the meeting (host control)."""
-    success = meeting_service.remove_participant(db, meeting_id, participant_id)
+    """Remove/kick a participant from the meeting (host only). Host cannot be removed."""
+    try:
+        success = meeting_service.remove_participant(db, meeting_id, participant_id, requester_id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     if not success:
         raise HTTPException(status_code=404, detail="Participant not found")
     return {"message": "Participant removed successfully"}
 
 
 @router.put("/{meeting_id}/end", response_model=MeetingResponse)
-def end_meeting(meeting_id: str, db: Session = Depends(get_db)):
-    """End a meeting and mark all participants as left."""
+def end_meeting(
+    meeting_id: str,
+    requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
+    db: Session = Depends(get_db),
+):
+    """End a meeting for all participants (host only)."""
+    # Verify requester is the host before ending
+    try:
+        meeting_service._assert_host(db, meeting_id, requester_id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     meeting = meeting_service.end_meeting(db, meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")

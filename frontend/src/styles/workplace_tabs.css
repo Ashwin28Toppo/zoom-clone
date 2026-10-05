@@ -595,3 +595,32 @@
   color: #64748b;
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  .zm-workplace-container {
+    margin-left: 0;
+    margin-bottom: 56px;
+    height: calc(100vh - var(--zm-header-height) - 56px);
+    flex-direction: column;
+  }
+
+  .zm-sub-sidebar {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid #e5e8ec;
+  }
+
+  .zm-workplace-main {
+    flex: 1;
+  }
+
+  .zm-meetings-detail-panel {
+    padding: 20px 16px;
+  }
+
+  .zm-detail-actions-row {
+    flex-wrap: wrap;
+  }
+}
+
