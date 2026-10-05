@@ -49,7 +49,7 @@ export default function JoinModal({ isOpen, onClose }: JoinModalProps) {
     const meetingId = extractMeetingId(meetingInput);
 
     if (!meetingId) {
-      setErrorMessage("Please enter a valid Meeting ID or personal link.");
+      setErrorMessage("Please enter a valid Meeting ID.");
       return;
     }
 
@@ -96,7 +96,7 @@ export default function JoinModal({ isOpen, onClose }: JoinModalProps) {
         <form onSubmit={handleJoinSubmit}>
           <div className="zm-join-form-group">
             <label className="zm-join-form-label" htmlFor="input-meeting-id">
-              Meeting ID or Personal Link Name
+              Meeting ID
             </label>
 
             {/* Input with Caret Toggle Button */}

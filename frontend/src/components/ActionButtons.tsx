@@ -144,13 +144,6 @@ export default function ActionButtons({ onOpenJoin }: ActionButtonsProps) {
           </svg>
           <span>Summaries</span>
         </div>
-        <div className="zm-subaction-pill">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7852ff" strokeWidth="2">
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-          </svg>
-          <span>My Notes</span>
-        </div>
       </section>
     </>
   );

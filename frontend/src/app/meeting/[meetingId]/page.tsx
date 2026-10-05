@@ -702,19 +702,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 </svg>
               </button>
 
-              <button type="button" className="zm-hdr-icon-btn" title="Whiteboard">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                </svg>
-              </button>
-
-              <button type="button" className="zm-hdr-icon-btn" title="AI Companion">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-                </svg>
-              </button>
-
               <button type="button" className="zm-hdr-icon-btn" title="View">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <rect x="3" y="3" width="7" height="7" rx="1" />

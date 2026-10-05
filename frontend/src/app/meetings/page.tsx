@@ -126,17 +126,6 @@ export default function MeetingsListPage() {
                 </div>
               )}
             </div>
-
-            <div className="zm-meetings-sub-footer">
-              <button
-                type="button"
-                className="zm-add-cal-btn"
-                onClick={() => alert("Calendar integration available.")}
-              >
-                <span>📅</span>
-                <span>Add a calendar</span>
-              </button>
-            </div>
           </aside>
 
           {/* Right Main Panel matching Image 2 */}

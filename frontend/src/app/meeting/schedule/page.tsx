@@ -25,14 +25,8 @@ export default function ScheduleMeetingPage() {
   const [durationHours, setDurationHours] = useState("0");
   const [durationMins, setDurationMins] = useState("40");
   const [timezone, setTimezone] = useState("(GMT-7:00) Pacific Time (US and Canada)");
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [invitees, setInvitees] = useState("");
-  const [meetingIdType, setMeetingIdType] = useState<"auto" | "pmi">("auto");
   const [passcode, setPasscode] = useState("CB8xDM");
   const [enablePasscode, setEnablePasscode] = useState(true);
-  const [notesTranscription, setNotesTranscription] = useState(true);
-  const [notesAudience, setNotesAudience] = useState<"all" | "org">("all");
-  const [meetingChat, setMeetingChat] = useState(true);
   const [hostVideo, setHostVideo] = useState<"on" | "off">("off");
   const [participantVideo, setParticipantVideo] = useState<"on" | "off">("off");
 
@@ -82,108 +76,24 @@ export default function ScheduleMeetingPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#ffffff" }}>
-      {/* Top Header matching reference screenshot */}
+      {/* Top Header */}
       <Navbar variant="portal" />
 
       <div className="zm-schedule-page">
-        {/* Left Sidebar matching Reference Screenshot */}
+        {/* Left Navigation Sidebar */}
         <aside className="zm-schedule-sidebar">
           <div className="zm-sched-side-group">
             <Link href="/dashboard" className="zm-sched-side-item">
               <span>Home</span>
             </Link>
 
-            <div className="zm-sched-side-heading">My Products</div>
-
-            <div className="zm-sched-side-item">
-              <span>AI</span>
-              <span className="zm-tag-new">New ↗</span>
-            </div>
-
-            <Link href="/dashboard" className="zm-sched-side-item active">
+            <Link href="/meetings" className="zm-sched-side-item active">
               <span>Meetings</span>
             </Link>
-
-            <div className="zm-sched-side-item">
-              <span>Recordings</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Summaries</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Hub</span>
-              <span className="zm-tag-new">New ↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Whiteboards</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Notes</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Clips</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Canvas</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Paper</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Sheets</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Slides</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Tasks</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item">
-              <span>Scheduler</span>
-              <span style={{ fontSize: 11, color: "#8c93a0" }}>↗</span>
-            </div>
-
-            <div className="zm-sched-side-item" style={{ color: "#0e71eb" }}>
-              <span>Discover More Products</span>
-            </div>
-          </div>
-
-          <div className="zm-sched-side-group" style={{ borderTop: "1px solid #f0f2f5", paddingTop: 12 }}>
-            <div className="zm-sched-side-item">
-              <span>› My Account</span>
-            </div>
-            <div className="zm-sched-side-item">
-              <span>› Admin</span>
-            </div>
-            <div className="zm-sched-side-item">
-              <span>› Support</span>
-            </div>
-
-            <button className="zm-upgrade-pro-btn">
-              <span>★</span> Upgrade to Pro
-            </button>
           </div>
         </aside>
 
-        {/* Main Schedule Form Content matching Reference Screenshots */}
+        {/* Main Schedule Form Content */}
         <main className="zm-schedule-main">
           <Link href="/dashboard" className="zm-back-link">
             ‹ Back to Meetings
@@ -314,17 +224,6 @@ export default function ScheduleMeetingPage() {
                   </select>
                   <span style={{ fontSize: 13, color: "#6e7687" }}>min</span>
                 </div>
-
-                {/* Plan Notice Banner matching screenshot */}
-                <div className="zm-notice-box">
-                  <span className="zm-notice-icon">⚠</span>
-                  <div>
-                    <span>
-                      You can schedule meetings for up to 40 minutes each with your current Basic plan. Need more time?
-                    </span>
-                    <span className="zm-notice-link">Upgrade to Zoom Workplace Pro</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -354,104 +253,23 @@ export default function ScheduleMeetingPage() {
                     (GMT+5:30) India Standard Time
                   </option>
                 </select>
-
-                <label className="zm-checkbox-option" style={{ marginTop: 4 }}>
-                  <input
-                    type="checkbox"
-                    checked={isRecurring}
-                    onChange={(e) => setIsRecurring(e.target.checked)}
-                  />
-                  <span>Recurring meeting</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Invitees Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label" htmlFor="sched-invitees">
-                Invitees
-              </label>
-              <div className="zm-form-row-content">
-                <input
-                  id="sched-invitees"
-                  type="text"
-                  className="zm-sched-input"
-                  placeholder="Enter user names or email addresses"
-                  value={invitees}
-                  onChange={(e) => setInvitees(e.target.value)}
-                />
-                <div className="zm-notice-box" style={{ backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" }}>
-                  <span className="zm-notice-icon" style={{ color: "#16a34a" }}>✓</span>
-                  <div>
-                    <span style={{ color: "#15803d", fontWeight: 500 }}>
-                      Direct Invites Enabled: Participants will receive meeting invitations automatically via link or email without connecting a calendar.
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
 
             {/* Meeting ID Field */}
             <div className="zm-form-row">
               <label className="zm-form-row-label">Meeting ID</label>
-              <div className="zm-form-row-content" style={{ gap: 8 }}>
-                <label className="zm-radio-option">
-                  <input
-                    type="radio"
-                    name="meetingIdOption"
-                    checked={meetingIdType === "auto"}
-                    onChange={() => setMeetingIdType("auto")}
-                  />
-                  <span>Generate Automatically</span>
-                </label>
-                <label className="zm-radio-option">
-                  <input
-                    type="radio"
-                    name="meetingIdOption"
-                    checked={meetingIdType === "pmi"}
-                    onChange={() => setMeetingIdType("pmi")}
-                  />
-                  <span>Personal Meeting ID 916 333 2813</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Template Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label" htmlFor="sched-template">
-                Template
-              </label>
               <div className="zm-form-row-content">
-                <select id="sched-template" className="zm-sched-select" style={{ maxWidth: 320 }}>
-                  <option>Select a template</option>
-                  <option>Standard Meeting</option>
-                  <option>1:1 Catch-up</option>
-                  <option>Sprint Planning</option>
-                </select>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#334155" }}>
+                  <span style={{ fontWeight: 500 }}>Generate Automatically</span>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>
+                    (A unique 12-digit Meeting ID and shareable link will be created)
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Whiteboard Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Whiteboard ⓘ</label>
-              <div className="zm-form-row-content">
-                <button type="button" className="zm-pill-action">
-                  <span>+</span> Add Whiteboard
-                </button>
-              </div>
-            </div>
-
-            {/* Docs Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Docs</label>
-              <div className="zm-form-row-content">
-                <button type="button" className="zm-pill-action">
-                  <span>+</span> Add Docs
-                </button>
-              </div>
-            </div>
-
-            {/* Security Field */}
+            {/* Security Field - Optional Passcode */}
             <div className="zm-form-row">
               <label className="zm-form-row-label">Security</label>
               <div className="zm-form-row-content">
@@ -471,71 +289,10 @@ export default function ScheduleMeetingPage() {
                       style={{ maxWidth: 160 }}
                       value={passcode}
                       onChange={(e) => setPasscode(e.target.value)}
+                      placeholder="Enter passcode"
                     />
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Workflow Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Workflow</label>
-              <div className="zm-form-row-content">
-                <span className="zm-notice-link" style={{ margin: 0 }}>
-                  Attach workflow to this meeting
-                </span>
-              </div>
-            </div>
-
-            {/* My Notes Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">My Notes</label>
-              <div className="zm-form-row-content">
-                <label className="zm-checkbox-option">
-                  <input
-                    type="checkbox"
-                    checked={notesTranscription}
-                    onChange={(e) => setNotesTranscription(e.target.checked)}
-                  />
-                  <span>Allow participants to transcribe meeting with My Notes</span>
-                </label>
-                {notesTranscription && (
-                  <div style={{ paddingLeft: 24, display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                    <label className="zm-radio-option">
-                      <input
-                        type="radio"
-                        name="notesAudience"
-                        checked={notesAudience === "org"}
-                        onChange={() => setNotesAudience("org")}
-                      />
-                      <span>Only participants in your organization</span>
-                    </label>
-                    <label className="zm-radio-option">
-                      <input
-                        type="radio"
-                        name="notesAudience"
-                        checked={notesAudience === "all"}
-                        onChange={() => setNotesAudience("all")}
-                      />
-                      <span>All participants</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Meeting Chat Field */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Meeting chat</label>
-              <div className="zm-form-row-content">
-                <label className="zm-checkbox-option">
-                  <input
-                    type="checkbox"
-                    checked={meetingChat}
-                    onChange={(e) => setMeetingChat(e.target.checked)}
-                  />
-                  <span>Allow users to access meeting chats before and after the meeting</span>
-                </label>
               </div>
             </div>
 
@@ -591,16 +348,6 @@ export default function ScheduleMeetingPage() {
               </div>
             </div>
 
-            {/* Options Link */}
-            <div className="zm-form-row">
-              <label className="zm-form-row-label">Options</label>
-              <div className="zm-form-row-content">
-                <span className="zm-notice-link" style={{ margin: 0 }}>
-                  Show
-                </span>
-              </div>
-            </div>
-
             {/* Footer Buttons */}
             <div className="zm-sched-footer">
               <button
@@ -617,13 +364,6 @@ export default function ScheduleMeetingPage() {
             </div>
           </form>
         </main>
-      </div>
-
-      {/* Floating Chat Widget Icon matching screenshot */}
-      <div className="zm-floating-chat" title="Zoom Support Chat">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-        </svg>
       </div>
     </div>
   );
