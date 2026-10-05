@@ -530,6 +530,22 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
+  // 9b. Host Mute Individual Participant
+  async function handleMuteParticipant(participantId: number) {
+    if (isActionPendingRef.current) return;
+    try {
+      isActionPendingRef.current = true;
+      await updateParticipantMedia(meetingId, participantId, { is_audio_on: false });
+      setParticipants((prev) =>
+        prev.map((p) => p.id === participantId ? { ...p, is_audio_on: false } : p)
+      );
+    } catch {
+      // ignore
+    } finally {
+      isActionPendingRef.current = false;
+    }
+  }
+
   // 10. Copy Invite Link
   function copyInviteLink() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -560,11 +576,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     !!meeting?.host_user_id &&
     meeting.host_user_id === user.id;
 
-  const filteredParticipants = participants.filter((p) =>
+  // Only show participants who haven't left (ghost fix)
+  const activeParticipants = participants.filter((p) => !p.left_at);
+
+  const filteredParticipants = activeParticipants.filter((p) =>
     p.display_name.toLowerCase().includes(participantSearch.toLowerCase())
   );
 
-  const remoteParticipants = participants.filter(
+  const remoteParticipants = activeParticipants.filter(
     (p) => !currentParticipant || p.id !== currentParticipant.id
   );
 
@@ -816,7 +835,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           {isParticipantsOpen && (
             <aside className="zm-side-drawer" style={{ position: "absolute", right: 0, top: 0, bottom: 64 }}>
               <div className="zm-drawer-header">
-                <span className="zm-drawer-title">Participants ({participants.length || 1})</span>
+                <span className="zm-drawer-title">Participants ({activeParticipants.length || 1})</span>
                 <button
                   type="button"
                   className="zm-drawer-close-btn"
@@ -844,7 +863,9 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                     </div>
                     <div className="zm-participant-name">
                       {currentParticipant?.display_name || "Guest"}
-                      <span className="zm-participant-tags"> {isHost ? "(Host, me)" : "(Me)"}</span>
+                      <span className="zm-participant-tags">
+                        {isHost ? " (Host, me)" : " (me)"}
+                      </span>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -864,13 +885,28 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                         <div className="zm-participant-avatar" style={{ backgroundColor: "#8a2be2" }}>
                           {p.display_name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="zm-participant-name">{p.display_name}</div>
+                        <div className="zm-participant-name">
+                          {p.display_name}
+                          {p.role === "host" && (
+                            <span className="zm-participant-tags"> (Host)</span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         {p.is_audio_on ? (
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="#30d158"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /></svg>
                         ) : (
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12" /></svg>
+                        )}
+                        {isHost && p.is_audio_on && (
+                          <button
+                            type="button"
+                            className="zm-tile-action-btn"
+                            style={{ padding: "2px 6px", fontSize: 10 }}
+                            onClick={() => handleMuteParticipant(p.id)}
+                          >
+                            Mute
+                          </button>
                         )}
                         {isHost && (
                           <button
@@ -969,7 +1005,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                   </svg>
-                  <span style={{ fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{participants.length || 1}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{activeParticipants.length || 1}</span>
                   <span className="zm-dock-caret">⌃</span>
                 </div>
                 <span>Participants</span>
