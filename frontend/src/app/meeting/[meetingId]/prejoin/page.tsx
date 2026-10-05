@@ -4,7 +4,8 @@ import React, { use, useState, useEffect, useRef, useTransition, useCallback, Su
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { getMeetingById, joinMeeting, Meeting } from "@/lib/api";
+import { getMeetingById, getParticipants, joinMeeting, Meeting } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import "@/styles/dashboard.css";
 import "@/styles/prejoin.css";
 
@@ -15,6 +16,7 @@ interface PrejoinPageProps {
 function PrejoinContent({ meetingId }: { meetingId: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const { user } = useAuth();
 
   // Meeting State
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -22,9 +24,12 @@ function PrejoinContent({ meetingId }: { meetingId: string }) {
   const [meetingError, setMeetingError] = useState<string | null>(null);
 
   // Pre-join Form State
-  const [displayName, setDisplayName] = useState("Ashwin Toppo");
+  const [displayName, setDisplayName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+
+  // Existing reconnect ID from sessionStorage
+  const [reconnectParticipantId, setReconnectParticipantId] = useState<number | null>(null);
 
   // Media Preview State
   const [isAudioOn, setIsAudioOn] = useState(true);
@@ -34,9 +39,21 @@ function PrejoinContent({ meetingId }: { meetingId: string }) {
   const streamRef = useRef<MediaStream | null>(null);
   const isJoiningRef = useRef(false);
 
-  // 1. Fetch Meeting
+  // 1. Fetch Meeting + restore sessionStorage reconnect
   useEffect(() => {
     let isMounted = true;
+
+    // Check if this user already has a participant record (page refresh = reconnect)
+    const stored = typeof window !== "undefined"
+      ? sessionStorage.getItem(`zoom_participant_${meetingId}`)
+      : null;
+    if (stored) {
+      try {
+        const p = JSON.parse(stored);
+        if (p?.id) setReconnectParticipantId(p.id);
+        if (p?.display_name) setDisplayName(p.display_name);
+      } catch { /* ignore */ }
+    }
 
     async function loadMeeting() {
       try {
@@ -70,6 +87,14 @@ function PrejoinContent({ meetingId }: { meetingId: string }) {
     loadMeeting();
     return () => { isMounted = false; };
   }, [meetingId]);
+
+  // Pre-fill display name from auth user (only if not reconnecting)
+  useEffect(() => {
+    if (user && !reconnectParticipantId) {
+      setDisplayName(user.name);
+    }
+  }, [user, reconnectParticipantId]);
+
 
   // 2. Request Media Preview
   const attachVideo = useCallback((el: HTMLVideoElement | null) => {
@@ -167,9 +192,29 @@ function PrejoinContent({ meetingId }: { meetingId: string }) {
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
     if (isJoiningRef.current) return;
-    if (!displayName.trim()) {
+    const name = displayName.trim();
+    if (!name) {
       setJoinError("Please enter your display name.");
       return;
+    }
+
+    // Frontend pre-validation: fetch current participants and check for name conflict
+    // Skip this check if reconnecting with the same stored participant ID
+    if (!reconnectParticipantId) {
+      try {
+        const existing = await getParticipants(meetingId);
+        const nameTaken = existing.some(
+          (p) => p.display_name.trim().toLowerCase() === name.toLowerCase()
+        );
+        if (nameTaken) {
+          setJoinError(
+            `The name "${name}" is already taken in this meeting. Please choose a different display name.`
+          );
+          return;
+        }
+      } catch {
+        // If participants can't be fetched, proceed — backend will validate
+      }
     }
 
     try {
@@ -178,16 +223,17 @@ function PrejoinContent({ meetingId }: { meetingId: string }) {
       setJoinError(null);
 
       const participant = await joinMeeting(meetingId, {
-        display_name: displayName.trim(),
+        display_name: name,
         is_audio_on: isAudioOn,
         is_video_on: isVideoOn,
+        reconnect_participant_id: reconnectParticipantId,
       });
 
       if (typeof window !== "undefined") {
         sessionStorage.setItem(`zoom_participant_${meetingId}`, JSON.stringify(participant));
         sessionStorage.setItem(
           `zoom_media_initial_${meetingId}`,
-          JSON.stringify({ isAudioOn, isVideoOn, displayName: displayName.trim() })
+          JSON.stringify({ isAudioOn, isVideoOn, displayName: name })
         );
       }
 

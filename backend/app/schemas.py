@@ -51,6 +51,7 @@ class JoinMeetingRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=255)
     is_audio_on: bool = True
     is_video_on: bool = True
+    reconnect_participant_id: Optional[int] = None  # For page-refresh reconnects
 
 
 class UpdateMediaStateRequest(BaseModel):

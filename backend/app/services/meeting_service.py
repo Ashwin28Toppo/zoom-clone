@@ -142,7 +142,13 @@ def get_recent_meetings(db: Session, host_user_id: int) -> list[MeetingResponse]
 def join_meeting(
     db: Session, meeting_id: str, request: JoinMeetingRequest
 ) -> ParticipantResponse:
-    """Join a meeting as a guest participant — no auth required."""
+    """Join a meeting as a guest participant — no auth required.
+
+    Reconnect logic: if reconnect_participant_id is provided and matches an
+    active participant, update their media state and return the same record.
+    Otherwise, if the display_name is already taken by another active participant,
+    raise ValueError to prevent name collisions.
+    """
     meeting = db.query(Meeting).filter(Meeting.meeting_id == meeting_id).first()
     if not meeting:
         raise ValueError("Meeting not found")
@@ -155,8 +161,27 @@ def join_meeting(
         meeting.status = "active"
         meeting.updated_at = datetime.utcnow()
 
-    # Check if this participant is already in the meeting (reconnect)
-    existing = (
+    # Reconnect path: if participant_id is provided, locate that specific record
+    if request.reconnect_participant_id:
+        existing = (
+            db.query(Participant)
+            .filter(
+                Participant.id == request.reconnect_participant_id,
+                Participant.meeting_id == meeting_id,
+                Participant.left_at.is_(None),
+            )
+            .first()
+        )
+        if existing:
+            existing.is_audio_on = request.is_audio_on
+            existing.is_video_on = request.is_video_on
+            db.commit()
+            db.refresh(existing)
+            return ParticipantResponse.model_validate(existing)
+        # If specific ID not found, fall through to create a new participant
+
+    # Block name collision: reject if display_name is already taken
+    name_conflict = (
         db.query(Participant)
         .filter(
             Participant.meeting_id == meeting_id,
@@ -165,12 +190,11 @@ def join_meeting(
         )
         .first()
     )
-    if existing:
-        existing.is_audio_on = request.is_audio_on
-        existing.is_video_on = request.is_video_on
-        db.commit()
-        db.refresh(existing)
-        return ParticipantResponse.model_validate(existing)
+    if name_conflict:
+        raise ValueError(
+            f'The name "{request.display_name}" is already taken in this meeting. '
+            "Please choose a different display name."
+        )
 
     # First participant to join becomes the host participant
     active_count = (

@@ -199,7 +199,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const isLeavingRef = useRef(false);
   const isEndingRef = useRef(false);
   const isActionPendingRef = useRef(false);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   // Stop media helper
   const stopLocalMedia = useCallback(() => {
@@ -254,20 +254,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           }
         }
 
-        // Direct URL visit fallback: auto-join
+        // Direct URL visit fallback: redirect to pre-join so user can enter their name
         if (!activeParticipant) {
-          try {
-            activeParticipant = await joinMeeting(meetingId, {
-              display_name: "Ashwin Toppo",
-              is_audio_on: true,
-              is_video_on: true,
-            });
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem(`zoom_participant_${meetingId}`, JSON.stringify(activeParticipant));
-            }
-          } catch {
-            // fallback
-          }
+          startTransition(() => {
+            router.replace(`/meeting/${meetingId}/prejoin`);
+          });
+          return;
         }
 
         if (activeParticipant && isMounted) {
@@ -482,7 +474,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   async function handleEndMeeting() {
     if (isEndingRef.current) return;
     if (!currentParticipant?.id) return;
-    if (!token) { alert("You must be signed in to end the meeting."); return; }
+    if (!token) return;
     try {
       isEndingRef.current = true;
       await endMeeting(meetingId, currentParticipant.id, token);
@@ -554,11 +546,19 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     setTimeout(() => setActiveReaction(null), 2500);
   }
 
+  // isHost: participant has host role (used for mute-all / remove controls)
   const isHost =
     currentParticipant?.role === "host" ||
     (Boolean(meeting?.host_name) &&
       Boolean(currentParticipant?.display_name) &&
       currentParticipant?.display_name?.trim().toLowerCase() === meeting?.host_name?.trim().toLowerCase());
+
+  // isAuthenticatedHost: JWT user is the owner of this meeting (End Meeting for All)
+  const isAuthenticatedHost =
+    !!token &&
+    !!user &&
+    !!meeting?.host_user_id &&
+    meeting.host_user_id === user.id;
 
   const filteredParticipants = participants.filter((p) =>
     p.display_name.toLowerCase().includes(participantSearch.toLowerCase())
@@ -1104,7 +1104,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 onClick={() => setIsEndModalOpen(true)}
               >
                 <div className="zm-end-circle-icon">✕</div>
-                <span>{isHost ? "End" : "Leave"}</span>
+                <span>{isAuthenticatedHost ? "End" : "Leave"}</span>
               </button>
             </div>
           </footer>
@@ -1116,15 +1116,15 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         <div className="zm-modal-backdrop" onClick={() => setIsEndModalOpen(false)}>
           <div className="zm-modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="zm-modal-title">
-              {isHost ? "End Meeting or Leave?" : "Leave Meeting"}
+              {isAuthenticatedHost ? "End Meeting or Leave?" : "Leave Meeting"}
             </h2>
             <p className="zm-modal-desc">
-              {isHost
+              {isAuthenticatedHost
                 ? "You can end the meeting for all participants, or leave the meeting."
                 : "Are you sure you want to leave this meeting?"}
             </p>
             <div className="zm-modal-actions">
-              {isHost ? (
+              {isAuthenticatedHost ? (
                 <>
                   <button
                     type="button"

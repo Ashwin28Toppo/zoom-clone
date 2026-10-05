@@ -64,6 +64,7 @@ export interface JoinMeetingPayload {
   display_name: string;
   is_audio_on?: boolean;
   is_video_on?: boolean;
+  reconnect_participant_id?: number | null;  // For page-refresh reconnects
 }
 
 // ─── Core Request Helper ─────────────────────────────────────────────────────
@@ -199,6 +200,7 @@ export async function joinMeeting(
       display_name: payload.display_name,
       is_audio_on: payload.is_audio_on ?? true,
       is_video_on: payload.is_video_on ?? true,
+      reconnect_participant_id: payload.reconnect_participant_id ?? null,
     }),
   });
 }
