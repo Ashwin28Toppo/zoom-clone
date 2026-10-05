@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { getUpcomingMeetings, createInstantMeeting, Meeting } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import "@/styles/dashboard.css";
 import "@/styles/workplace_tabs.css";
 
 export default function MeetingsListPage() {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const { token } = useAuth();
   const [upcomingMeetings, setUpcomingMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>("PMI");
   const [isCopied, setIsCopied] = useState(false);
@@ -18,17 +20,19 @@ export default function MeetingsListPage() {
   const pmi = "916 333 2813";
 
   const loadMeetings = React.useCallback(async () => {
+    if (!token) return;
     try {
-      const data = await getUpcomingMeetings();
+      const data = await getUpcomingMeetings(token);
       setUpcomingMeetings(data.meetings || []);
     } catch {
       // ignore
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
+    if (!token) return;
     let isMounted = true;
-    getUpcomingMeetings()
+    getUpcomingMeetings(token)
       .then((data) => {
         if (isMounted) {
           setUpcomingMeetings(data.meetings || []);
@@ -41,11 +45,12 @@ export default function MeetingsListPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   async function handleStartPMI() {
+    if (!token) return;
     try {
-      const m = await createInstantMeeting("Ashwin Toppo's Personal Meeting");
+      const m = await createInstantMeeting(token, "Ashwin Toppo's Personal Meeting");
       startTransition(() => {
         router.push(`/meeting/${m.meeting_id}/prejoin`);
       });

@@ -1,0 +1,231 @@
+/* ─── Auth Pages (Login / Signup) ─────────────────────────────────────────── */
+
+.zm-auth-page {
+  min-height: 100vh;
+  display: flex;
+  background: #f0f2f5;
+  font-family: var(--font-geist-sans), 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* Left decorative panel */
+.zm-auth-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0e72ed 0%, #1a5bcc 60%, #0a3fa8 100%);
+  padding: 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.zm-auth-left::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  top: -120px;
+  right: -120px;
+}
+
+.zm-auth-left::after {
+  content: "";
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  bottom: -80px;
+  left: -60px;
+}
+
+.zm-auth-brand {
+  position: relative;
+  z-index: 1;
+  color: white;
+  text-align: center;
+}
+
+.zm-auth-brand-logo {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: white;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.zm-auth-brand-sub {
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  display: block;
+  margin-bottom: 32px;
+}
+
+.zm-auth-brand-tagline {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+
+.zm-auth-brand-desc {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+  max-width: 340px;
+}
+
+/* Right form panel */
+.zm-auth-right {
+  width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 48px 56px;
+  box-shadow: -4px 0 40px rgba(0, 0, 0, 0.06);
+}
+
+.zm-auth-card {
+  width: 100%;
+  max-width: 360px;
+}
+
+.zm-auth-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 6px 0;
+}
+
+.zm-auth-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 28px 0;
+}
+
+.zm-auth-subtitle a {
+  color: #0e72ed;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.zm-auth-subtitle a:hover {
+  text-decoration: underline;
+}
+
+.zm-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.zm-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.zm-auth-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.zm-auth-input {
+  padding: 11px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.zm-auth-input:focus {
+  border-color: #0e72ed;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(14, 114, 237, 0.12);
+}
+
+.zm-auth-input.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.zm-auth-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zm-auth-btn {
+  padding: 12px 24px;
+  background: #0e72ed;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(14, 114, 237, 0.35);
+}
+
+.zm-auth-btn:hover:not(:disabled) {
+  background: #0a5ec9;
+  box-shadow: 0 4px 16px rgba(14, 114, 237, 0.4);
+}
+
+.zm-auth-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.zm-auth-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.zm-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.zm-auth-divider::before,
+.zm-auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .zm-auth-left {
+    display: none;
+  }
+  .zm-auth-right {
+    width: 100%;
+    padding: 40px 24px;
+  }
+}

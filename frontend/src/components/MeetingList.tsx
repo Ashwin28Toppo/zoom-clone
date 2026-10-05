@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Meeting, getUpcomingMeetings, getRecentMeetings } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+
 
 interface MeetingListProps {
   refreshTrigger: number;
@@ -10,6 +12,7 @@ interface MeetingListProps {
 
 export default function MeetingList({ refreshTrigger }: MeetingListProps) {
   const router = useRouter();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<"upcoming" | "recent">("upcoming");
   const [upcoming, setUpcoming] = useState<Meeting[]>([]);
   const [recent, setRecent] = useState<Meeting[]>([]);
@@ -18,12 +21,13 @@ export default function MeetingList({ refreshTrigger }: MeetingListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleRefresh = useCallback(async () => {
+    if (!token) return;
     try {
       setIsLoading(true);
       setErrorMessage(null);
       const [upcomingRes, recentRes] = await Promise.all([
-        getUpcomingMeetings(),
-        getRecentMeetings(),
+        getUpcomingMeetings(token),
+        getRecentMeetings(token),
       ]);
       setUpcoming(upcomingRes.meetings);
       setRecent(recentRes.meetings);
@@ -33,17 +37,19 @@ export default function MeetingList({ refreshTrigger }: MeetingListProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [token]);
+
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
+      if (!token) { setIsLoading(false); return; }
       try {
         setErrorMessage(null);
         const [upcomingRes, recentRes] = await Promise.all([
-          getUpcomingMeetings(),
-          getRecentMeetings(),
+          getUpcomingMeetings(token),
+          getRecentMeetings(token),
         ]);
         if (isMounted) {
           setUpcoming(upcomingRes.meetings);

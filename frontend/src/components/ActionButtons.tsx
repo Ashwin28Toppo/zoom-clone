@@ -4,22 +4,26 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createInstantMeeting } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 interface ActionButtonsProps {
   onOpenJoin: () => void;
+  onMeetingCreated?: () => void;
 }
 
-export default function ActionButtons({ onOpenJoin }: ActionButtonsProps) {
+export default function ActionButtons({ onOpenJoin, onMeetingCreated }: ActionButtonsProps) {
   const router = useRouter();
+  const { token } = useAuth();
   const [isCreatingInstant, setIsCreatingInstant] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleNewMeeting() {
+    if (!token) return;
     try {
       setIsCreatingInstant(true);
       setErrorMessage(null);
-      const meeting = await createInstantMeeting("Ashwin Toppo's Zoom Meeting", "Ashwin Toppo");
-      // Navigate to pre-join screen
+      const meeting = await createInstantMeeting(token);
+      onMeetingCreated?.();
       router.push(`/meeting/${meeting.meeting_id}/prejoin`);
     } catch (err: unknown) {
       setIsCreatingInstant(false);

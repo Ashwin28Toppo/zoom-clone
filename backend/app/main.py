@@ -5,14 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-from .database import engine, Base
+from .database import engine, Base, SessionLocal
 from .routes.meetings import router as meetings_router
-from .seed import seed_database
+from .routes.auth import router as auth_router
 
 app = FastAPI(
     title="Zoom Clone API",
     description="Backend API for Zoom-like video conferencing application",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 # CORS — allow frontend origin (configurable via env var + wildcard vercel regex)
@@ -31,17 +31,42 @@ app.add_middleware(
 )
 
 # Register route modules
+app.include_router(auth_router)
 app.include_router(meetings_router)
+
+
+def _migrate_database():
+    """Add new columns to existing tables if they don't exist (SQLite migration)."""
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./zoom_clone.db")
+    if not db_url.startswith("sqlite"):
+        return  # Only needed for SQLite
+
+    import sqlite3
+    db_path = db_url.replace("sqlite:///", "").replace("./", "")
+    if not os.path.exists(db_path):
+        return  # New DB, no migration needed
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    try:
+        # Add host_user_id to meetings if missing
+        cursor.execute("PRAGMA table_info(meetings)")
+        meeting_cols = {row[1] for row in cursor.fetchall()}
+        if "host_user_id" not in meeting_cols:
+            cursor.execute("ALTER TABLE meetings ADD COLUMN host_user_id INTEGER REFERENCES users(id)")
+            conn.commit()
+    finally:
+        conn.close()
 
 
 @app.on_event("startup")
 def on_startup():
-    """Create tables and seed data on application startup."""
+    """Create tables and run migrations on application startup."""
+    _migrate_database()        # Run before create_all so FKs are consistent
     Base.metadata.create_all(bind=engine)
-    seed_database()
 
 
 @app.get("/api/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "message": "Zoom Clone API is running"}
+    return {"status": "ok", "message": "Zoom Clone API is running", "version": "2.0.0"}

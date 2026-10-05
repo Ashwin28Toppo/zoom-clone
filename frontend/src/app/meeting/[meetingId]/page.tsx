@@ -17,6 +17,7 @@ import {
   Participant,
 } from "@/lib/api";
 import { useWebRTC } from "@/lib/webrtc";
+import { useAuth } from "@/lib/auth-context";
 import "@/styles/dashboard.css";
 import "@/styles/meeting.css";
 
@@ -198,6 +199,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const isLeavingRef = useRef(false);
   const isEndingRef = useRef(false);
   const isActionPendingRef = useRef(false);
+  const { token } = useAuth();
 
   // Stop media helper
   const stopLocalMedia = useCallback(() => {
@@ -480,9 +482,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   async function handleEndMeeting() {
     if (isEndingRef.current) return;
     if (!currentParticipant?.id) return;
+    if (!token) { alert("You must be signed in to end the meeting."); return; }
     try {
       isEndingRef.current = true;
-      await endMeeting(meetingId, currentParticipant.id);
+      await endMeeting(meetingId, currentParticipant.id, token);
       setIsMeetingEnded(true);
     } catch {
       // ignore
@@ -499,9 +502,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   async function handleMuteAll() {
     if (isActionPendingRef.current) return;
     if (!currentParticipant?.id) return;
+    if (!token) { alert("You must be signed in to perform this action."); return; }
     try {
       isActionPendingRef.current = true;
-      const updated = await muteAllParticipants(meetingId, currentParticipant.id);
+      const updated = await muteAllParticipants(meetingId, currentParticipant.id, token);
       setParticipants(updated);
       setIsAudioOn(false);
       if (localStreamRef.current) {
@@ -520,10 +524,11 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   async function handleRemoveParticipant(participantId: number) {
     if (isActionPendingRef.current) return;
     if (!currentParticipant?.id) return;
+    if (!token) { alert("You must be signed in to perform this action."); return; }
     if (!confirm("Are you sure you want to remove this participant?")) return;
     try {
       isActionPendingRef.current = true;
-      await removeParticipant(meetingId, participantId, currentParticipant.id);
+      await removeParticipant(meetingId, participantId, currentParticipant.id, token);
       setParticipants((prev) => prev.filter((p) => p.id !== participantId));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to remove participant.";

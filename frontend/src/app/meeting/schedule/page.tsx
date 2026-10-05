@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createScheduledMeeting } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import "@/styles/dashboard.css";
 import "@/styles/schedule.css";
 
 export default function ScheduleMeetingPage() {
   const router = useRouter();
+  const { token } = useAuth();
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -56,12 +58,11 @@ export default function ScheduleMeetingPage() {
 
       const totalDuration = parseInt(durationHours, 10) * 60 + parseInt(durationMins, 10);
 
-      await createScheduledMeeting({
+      await createScheduledMeeting(token!, {
         title: topic.trim(),
         description: description.trim() || undefined,
         scheduled_at: scheduledDateTime.toISOString(),
         duration: Math.max(15, totalDuration || 40),
-        host_name: "Ashwin Toppo",
       });
 
       // Redirect back to dashboard where upcoming meetings list updates

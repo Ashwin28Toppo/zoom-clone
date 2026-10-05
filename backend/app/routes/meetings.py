@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..models import User
 from ..schemas import (
     CreateInstantMeetingRequest,
     CreateScheduledMeetingRequest,
@@ -15,6 +16,7 @@ from ..schemas import (
     UpdateMediaStateRequest,
 )
 from ..services import meeting_service
+from .auth import get_current_user_required, get_current_user_optional
 
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 
@@ -23,37 +25,45 @@ router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 def create_instant_meeting(
     request: CreateInstantMeetingRequest = CreateInstantMeetingRequest(),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
-    """Create a new instant meeting and return its details."""
-    return meeting_service.create_instant_meeting(db, request)
+    """Create a new instant meeting. Requires authentication."""
+    return meeting_service.create_instant_meeting(db, request, host_user=current_user)
 
 
 @router.post("/schedule", response_model=MeetingResponse, status_code=201)
 def create_scheduled_meeting(
     request: CreateScheduledMeetingRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
-    """Create a new scheduled meeting."""
-    return meeting_service.create_scheduled_meeting(db, request)
+    """Create a new scheduled meeting. Requires authentication."""
+    return meeting_service.create_scheduled_meeting(db, request, host_user=current_user)
 
 
 @router.get("/upcoming", response_model=MeetingListResponse)
-def get_upcoming_meetings(db: Session = Depends(get_db)):
-    """Get all upcoming scheduled meetings."""
-    meetings = meeting_service.get_upcoming_meetings(db)
+def get_upcoming_meetings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
+    """Get all upcoming scheduled meetings for the authenticated user."""
+    meetings = meeting_service.get_upcoming_meetings(db, host_user_id=current_user.id)
     return MeetingListResponse(meetings=meetings, total=len(meetings))
 
 
 @router.get("/recent", response_model=MeetingListResponse)
-def get_recent_meetings(db: Session = Depends(get_db)):
-    """Get recently ended meetings."""
-    meetings = meeting_service.get_recent_meetings(db)
+def get_recent_meetings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
+    """Get recently ended meetings for the authenticated user."""
+    meetings = meeting_service.get_recent_meetings(db, host_user_id=current_user.id)
     return MeetingListResponse(meetings=meetings, total=len(meetings))
 
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)
 def get_meeting(meeting_id: str, db: Session = Depends(get_db)):
-    """Get a specific meeting by its meeting ID (validates meeting existence)."""
+    """Get a specific meeting by its meeting ID — public, no auth required (for guest joining)."""
     meeting = meeting_service.get_meeting_by_id(db, meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
@@ -66,7 +76,7 @@ def join_meeting(
     request: JoinMeetingRequest,
     db: Session = Depends(get_db),
 ):
-    """Join an existing meeting as a participant with display name and initial media states."""
+    """Join an existing meeting. No authentication required — guests can join freely."""
     try:
         return meeting_service.join_meeting(db, meeting_id, request)
     except ValueError as e:
@@ -79,7 +89,7 @@ def leave_meeting(
     participant_id: int = Query(...),
     db: Session = Depends(get_db),
 ):
-    """Leave a meeting (mark participant as left)."""
+    """Leave a meeting (mark participant as left). No auth required."""
     success = meeting_service.leave_meeting(db, meeting_id, participant_id)
     if not success:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -93,7 +103,7 @@ def update_participant_media(
     request: UpdateMediaStateRequest,
     db: Session = Depends(get_db),
 ):
-    """Update participant audio/video toggle states."""
+    """Update participant audio/video toggle states. No auth required (self-service)."""
     participant = meeting_service.update_participant_media(db, meeting_id, participant_id, request)
     if not participant:
         raise HTTPException(status_code=404, detail="Active participant not found")
@@ -105,10 +115,13 @@ def mute_all_participants(
     meeting_id: str,
     requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
-    """Mute all active participants in a meeting (host control only)."""
+    """Mute all active participants. Requires authentication and host ownership."""
     try:
-        return meeting_service.mute_all_participants(db, meeting_id, requester_id)
+        return meeting_service.mute_all_participants(
+            db, meeting_id, requester_id, host_user_id=current_user.id
+        )
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
@@ -119,10 +132,13 @@ def remove_participant(
     participant_id: int,
     requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
-    """Remove/kick a participant from the meeting (host only). Host cannot be removed."""
+    """Remove/kick a participant. Requires authentication and host ownership."""
     try:
-        success = meeting_service.remove_participant(db, meeting_id, participant_id, requester_id)
+        success = meeting_service.remove_participant(
+            db, meeting_id, participant_id, requester_id, host_user_id=current_user.id
+        )
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
     if not success:
@@ -135,11 +151,11 @@ def end_meeting(
     meeting_id: str,
     requester_id: int = Query(..., description="Participant ID of the requester (must be host)"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
-    """End a meeting for all participants (host only)."""
-    # Verify requester is the host before ending
+    """End a meeting for all participants. Requires authentication and host ownership."""
     try:
-        meeting_service._assert_host(db, meeting_id, requester_id)
+        meeting_service._assert_host(db, meeting_id, requester_id, host_user_id=current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
     meeting = meeting_service.end_meeting(db, meeting_id)
@@ -150,21 +166,23 @@ def end_meeting(
 
 @router.get("/{meeting_id}/participants", response_model=list[ParticipantResponse])
 def get_participants(meeting_id: str, db: Session = Depends(get_db)):
-    """Get all active participants in a meeting."""
+    """Get all active participants in a meeting. Public (no auth required)."""
     return meeting_service.get_participants(db, meeting_id)
 
 
-# WebRTC Signaling Routes
+# ─── WebRTC Signaling Routes ──────────────────────────────────────────────────
 from fastapi import WebSocket, WebSocketDisconnect
 from ..services.signaling_service import signaling_manager
 from pydantic import BaseModel
 from typing import Any, Optional
+
 
 class SignalPayload(BaseModel):
     sender_id: int
     target_id: Optional[int] = None
     signal_type: str
     data: Any
+
 
 @router.websocket("/{meeting_id}/ws/{participant_id}")
 async def websocket_signaling(websocket: WebSocket, meeting_id: str, participant_id: int):
@@ -208,4 +226,3 @@ def get_signals(meeting_id: str, participant_id: int = Query(...)):
     """REST fallback endpoint to fetch pending WebRTC signals."""
     signals = signaling_manager.get_and_clear_queue(meeting_id, participant_id)
     return {"signals": signals}
-

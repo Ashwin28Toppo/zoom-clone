@@ -4,11 +4,12 @@ Meeting service — business logic for all meeting operations.
 import random
 import string
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from ..models import Meeting, Participant
+from ..models import Meeting, Participant, User
 from ..schemas import (
     CreateInstantMeetingRequest,
     CreateScheduledMeetingRequest,
@@ -42,6 +43,7 @@ def _to_meeting_response(meeting: Meeting) -> MeetingResponse:
         invite_link=meeting.invite_link,
         status=meeting.status,
         host_name=meeting.host_name,
+        host_user_id=meeting.host_user_id,
         created_at=meeting.created_at,
         updated_at=meeting.updated_at,
         participant_count=len(active_participants),
@@ -52,10 +54,10 @@ def _to_meeting_response(meeting: Meeting) -> MeetingResponse:
 
 
 def create_instant_meeting(
-    db: Session, request: CreateInstantMeetingRequest
+    db: Session, request: CreateInstantMeetingRequest, host_user: User
 ) -> MeetingResponse:
     meeting_id = generate_meeting_id(db)
-    host_name = request.host_name or "Ashwin Toppo"
+    host_name = host_user.name
     title = request.title or f"{host_name}'s Zoom Meeting"
 
     meeting = Meeting(
@@ -64,6 +66,7 @@ def create_instant_meeting(
         meeting_type="instant",
         status="waiting",
         host_name=host_name,
+        host_user_id=host_user.id,
         duration=60,
         invite_link=f"/meeting/{meeting_id}",
     )
@@ -74,7 +77,7 @@ def create_instant_meeting(
 
 
 def create_scheduled_meeting(
-    db: Session, request: CreateScheduledMeetingRequest
+    db: Session, request: CreateScheduledMeetingRequest, host_user: User
 ) -> MeetingResponse:
     meeting_id = generate_meeting_id(db)
 
@@ -86,7 +89,8 @@ def create_scheduled_meeting(
         scheduled_at=request.scheduled_at,
         duration=request.duration,
         status="waiting",
-        host_name=request.host_name or "Ashwin Toppo",
+        host_name=host_user.name,
+        host_user_id=host_user.id,
         invite_link=f"/meeting/{meeting_id}",
     )
     db.add(meeting)
@@ -102,11 +106,13 @@ def get_meeting_by_id(db: Session, meeting_id: str) -> MeetingResponse | None:
     return _to_meeting_response(meeting)
 
 
-def get_upcoming_meetings(db: Session) -> list[MeetingResponse]:
+def get_upcoming_meetings(db: Session, host_user_id: int) -> list[MeetingResponse]:
+    """Get upcoming scheduled meetings for the authenticated host."""
     now = datetime.utcnow()
     meetings = (
         db.query(Meeting)
         .filter(
+            Meeting.host_user_id == host_user_id,
             Meeting.meeting_type == "scheduled",
             Meeting.status != "ended",
             Meeting.scheduled_at > now,
@@ -118,10 +124,14 @@ def get_upcoming_meetings(db: Session) -> list[MeetingResponse]:
     return [_to_meeting_response(m) for m in meetings]
 
 
-def get_recent_meetings(db: Session) -> list[MeetingResponse]:
+def get_recent_meetings(db: Session, host_user_id: int) -> list[MeetingResponse]:
+    """Get recently ended meetings for the authenticated host."""
     meetings = (
         db.query(Meeting)
-        .filter(Meeting.status == "ended")
+        .filter(
+            Meeting.host_user_id == host_user_id,
+            Meeting.status == "ended",
+        )
         .order_by(desc(Meeting.updated_at))
         .limit(20)
         .all()
@@ -132,6 +142,7 @@ def get_recent_meetings(db: Session) -> list[MeetingResponse]:
 def join_meeting(
     db: Session, meeting_id: str, request: JoinMeetingRequest
 ) -> ParticipantResponse:
+    """Join a meeting as a guest participant — no auth required."""
     meeting = db.query(Meeting).filter(Meeting.meeting_id == meeting_id).first()
     if not meeting:
         raise ValueError("Meeting not found")
@@ -144,7 +155,7 @@ def join_meeting(
         meeting.status = "active"
         meeting.updated_at = datetime.utcnow()
 
-    # Check if this participant is already in the meeting
+    # Check if this participant is already in the meeting (reconnect)
     existing = (
         db.query(Participant)
         .filter(
@@ -161,7 +172,7 @@ def join_meeting(
         db.refresh(existing)
         return ParticipantResponse.model_validate(existing)
 
-    # First participant becomes host
+    # First participant to join becomes the host participant
     active_count = (
         db.query(Participant)
         .filter(Participant.meeting_id == meeting_id, Participant.left_at.is_(None))
@@ -207,7 +218,6 @@ def end_meeting(db: Session, meeting_id: str) -> MeetingResponse | None:
     meeting.status = "ended"
     meeting.updated_at = datetime.utcnow()
 
-    # Mark all active participants as left
     active = (
         db.query(Participant)
         .filter(
@@ -278,19 +288,36 @@ def _get_active_participant(db: Session, meeting_id: str, participant_id: int) -
     )
 
 
-def _assert_host(db: Session, meeting_id: str, requester_id: int) -> Participant:
-    """Raise ValueError if requester is not an active host in this meeting."""
+def _assert_host(
+    db: Session, meeting_id: str, requester_id: int, host_user_id: Optional[int] = None
+) -> Participant:
+    """Raise ValueError if requester is not an active host in this meeting.
+
+    Dual-layer check:
+    1. The participant row must have role='host'
+    2. If host_user_id is provided, the meeting's host_user_id must match (JWT-verified user)
+    """
     requester = _get_active_participant(db, meeting_id, requester_id)
     if not requester:
         raise ValueError("Requester is not an active participant in this meeting")
     if requester.role != "host":
         raise ValueError("Only the host is allowed to perform this action")
+
+    # Backend-enforced: verify the JWT user actually owns this meeting
+    if host_user_id is not None:
+        meeting = db.query(Meeting).filter(Meeting.meeting_id == meeting_id).first()
+        if meeting and meeting.host_user_id is not None:
+            if meeting.host_user_id != host_user_id:
+                raise ValueError("You are not the authenticated host of this meeting")
+
     return requester
 
 
-def mute_all_participants(db: Session, meeting_id: str, requester_id: int) -> list[ParticipantResponse]:
+def mute_all_participants(
+    db: Session, meeting_id: str, requester_id: int, host_user_id: Optional[int] = None
+) -> list[ParticipantResponse]:
     """Mute all active participants in a meeting (host control only)."""
-    _assert_host(db, meeting_id, requester_id)
+    _assert_host(db, meeting_id, requester_id, host_user_id=host_user_id)
     participants = (
         db.query(Participant)
         .filter(
@@ -305,17 +332,22 @@ def mute_all_participants(db: Session, meeting_id: str, requester_id: int) -> li
     return [ParticipantResponse.model_validate(p) for p in participants]
 
 
-def remove_participant(db: Session, meeting_id: str, participant_id: int, requester_id: int) -> bool:
+def remove_participant(
+    db: Session,
+    meeting_id: str,
+    participant_id: int,
+    requester_id: int,
+    host_user_id: Optional[int] = None,
+) -> bool:
     """Remove/kick a participant from the meeting.
 
-    Rules enforced:
-    - Only a host (requester_id must be an active host) may remove others.
-    - The host cannot be removed by anyone, including another host call.
-    - A participant cannot remove themselves via this endpoint (use leave_meeting).
+    Rules:
+    - Only a host (role='host') may remove others.
+    - JWT user must match meeting.host_user_id.
+    - The host participant cannot be removed.
     """
-    _assert_host(db, meeting_id, requester_id)
+    _assert_host(db, meeting_id, requester_id, host_user_id=host_user_id)
 
-    # Prevent removing the host (self or otherwise)
     target = _get_active_participant(db, meeting_id, participant_id)
     if not target:
         return False
@@ -323,4 +355,3 @@ def remove_participant(db: Session, meeting_id: str, participant_id: int, reques
         raise ValueError("The host cannot be removed from the meeting")
 
     return leave_meeting(db, meeting_id, participant_id)
-
