@@ -71,6 +71,8 @@ export function useWebRTC(
     [meetingId, currentParticipantId]
   );
 
+  const initiateOfferRef = useRef<((peerId: number) => Promise<void>) | null>(null);
+
   // Create or get PeerConnection for a specific peer
   const getOrCreatePeerConnection = useCallback(
     (peerId: number): RTCPeerConnection => {
@@ -123,13 +125,27 @@ export function useWebRTC(
         }
       };
 
-      // Connection State Change
+      // Negotiation Needed handler (auto renegotiations on track swap/add)
+      pc.onnegotiationneeded = async () => {
+        try {
+          if (makingOffer.current.get(peerId)) return;
+          makingOffer.current.set(peerId, true);
+          const offer = await pc.createOffer();
+          if (pc.signalingState !== "stable") return;
+          await pc.setLocalDescription(offer);
+          await sendSignal(peerId, "offer", offer);
+        } catch {
+          // ignore
+        } finally {
+          makingOffer.current.set(peerId, false);
+        }
+      };
+
+      // Connection State Change (prevent stream drop on transient disconnect)
       pc.onconnectionstatechange = () => {
-        if (
-          pc?.connectionState === "disconnected" ||
-          pc?.connectionState === "failed" ||
-          pc?.connectionState === "closed"
-        ) {
+        if (pc?.connectionState === "failed") {
+          initiateOfferRef.current?.(peerId);
+        } else if (pc?.connectionState === "closed") {
           setRemoteStreams((prev) => {
             const next = new Map(prev);
             next.delete(peerId);
@@ -164,6 +180,10 @@ export function useWebRTC(
     },
     [getOrCreatePeerConnection, sendSignal]
   );
+
+  useEffect(() => {
+    initiateOfferRef.current = initiateOffer;
+  }, [initiateOffer]);
 
   // Handle incoming signals with polite peer collision resolution
   const handleSignal = useCallback(
@@ -284,7 +304,7 @@ export function useWebRTC(
       const senders = pc.getSenders();
 
       localStream.getTracks().forEach((track) => {
-        const sender = senders.find((s) => {
+        const sender = senders.find((s: RTCRtpSender) => {
           if (s.track?.kind === track.kind) return true;
           const transceiver = pc.getTransceivers().find((t) => t.sender === s);
           return transceiver?.receiver.track.kind === track.kind;

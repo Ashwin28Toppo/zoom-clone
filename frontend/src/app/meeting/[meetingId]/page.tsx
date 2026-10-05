@@ -967,7 +967,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   autoPlay
                   playsInline
                   muted
-                  className="zm-video-element"
+                  className={`zm-video-element ${!isSharingScreen ? "mirrored" : ""}`}
                   style={{ display: (isVideoOn || isSharingScreen) && !mediaPermissionDenied ? "block" : "none" }}
                 />
 
