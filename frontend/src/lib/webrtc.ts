@@ -368,13 +368,27 @@ export function useWebRTC(
   }, [meetingId, currentParticipantId]);
 
   // ─── Auto-initiate offers for new remote participants ─────────────────────
-  // Higher-ID peer always initiates; lower-ID peer responds to peer-joined/ready.
-  // This prevents simultaneous-offer glare which causes "failed" PC states with 3+ users.
+  // Higher-ID peer initiates immediately (it knows it's the offerer).
+  // Lower-ID peer relies on peer-joined/ready WS signal to initiate.
+  // Safety fallback: if lower-ID peer sees a new remote participant but still
+  // has no connection after 3 seconds (e.g. WS signal was missed), it initiates.
   useEffect(() => {
     if (!currentParticipantId) return;
     remoteParticipants.forEach((p) => {
-      if (currentParticipantId > p.id && !peerConnections.current.has(p.id)) {
+      const existing = peerConnections.current.get(p.id);
+      if (existing && existing.signalingState !== "closed") return; // already connected
+      if (currentParticipantId > p.id) {
+        // Higher-ID initiates immediately
         initiateOfferRef.current?.(p.id);
+      } else {
+        // Lower-ID: fallback after 3s if peer-joined/ready signal was missed
+        const peerId = p.id;
+        setTimeout(() => {
+          const pc = peerConnections.current.get(peerId);
+          if (!pc || pc.signalingState === "closed") {
+            initiateOfferRef.current?.(peerId);
+          }
+        }, 3000);
       }
     });
   }, [remoteParticipants, currentParticipantId]);
