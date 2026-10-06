@@ -368,15 +368,12 @@ export function useWebRTC(
   }, [meetingId, currentParticipantId]);
 
   // ─── Auto-initiate offers for new remote participants ─────────────────────
-  // Both peers now initiate an offer the first time they see each other.
-  // The perfect-negotiation glare handling in handleSignal (rollback on the
-  // polite/higher-ID peer) prevents duplicate connections gracefully.
-  // Previously only the higher-ID peer initiated here, leaving the lower-ID
-  // peer waiting passively for a 'ready' WebSocket event that might never arrive.
+  // Higher-ID peer always initiates; lower-ID peer responds to peer-joined/ready.
+  // This prevents simultaneous-offer glare which causes "failed" PC states with 3+ users.
   useEffect(() => {
     if (!currentParticipantId) return;
     remoteParticipants.forEach((p) => {
-      if (!peerConnections.current.has(p.id)) {
+      if (currentParticipantId > p.id && !peerConnections.current.has(p.id)) {
         initiateOfferRef.current?.(p.id);
       }
     });

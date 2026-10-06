@@ -40,13 +40,14 @@ function RemoteParticipantTile({
 }: RemoteParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const attachVideo = useCallback(
     (el: HTMLVideoElement | null) => {
       videoRef.current = el;
       if (el && stream) {
         if (el.srcObject !== stream) el.srcObject = stream;
-        el.play().then(() => {}).catch(() => {});
+        el.play().then(() => setIsPlaying(true)).catch(() => {});
       }
     },
     [stream]
@@ -66,17 +67,17 @@ function RemoteParticipantTile({
   useEffect(() => {
     if (videoRef.current && stream) {
       if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream;
-      videoRef.current.play().then(() => {}).catch(() => {});
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }
     if (audioRef.current && stream) {
       if (audioRef.current.srcObject !== stream) audioRef.current.srcObject = stream;
       audioRef.current.play().catch(() => {});
     }
+    if (!stream) setIsPlaying(false);
   }, [stream, participant.is_video_on]);
 
-  const hasLiveVideoTrack = Boolean(
-    stream && stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live")
-  );
+  // Show avatar when: no stream, or participant turned camera off, or video not yet playing
+  const showAvatar = !participant.is_video_on || !stream || !isPlaying;
 
   return (
     <div className="zm-video-tile" style={{ position: "relative", overflow: "hidden" }}>
@@ -85,11 +86,14 @@ function RemoteParticipantTile({
         ref={attachVideo}
         autoPlay
         playsInline
+        onPlaying={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEmptied={() => setIsPlaying(false)}
         className="zm-video-element"
         style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
       />
 
-      {!hasLiveVideoTrack && (
+      {showAvatar && (
         <div
           className="zm-tile-avatar-view"
           style={{ position: "absolute", inset: 0, zIndex: 2, backgroundColor: "#11161f", display: "flex", alignItems: "center", justifyContent: "center" }}
