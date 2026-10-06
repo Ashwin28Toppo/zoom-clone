@@ -3,9 +3,10 @@ Meeting API routes — all REST endpoints for meeting operations.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 
 from ..database import get_db
-from ..models import User
+from ..models import User, Participant
 from ..schemas import (
     CreateInstantMeetingRequest,
     CreateScheduledMeetingRequest,
@@ -19,6 +20,9 @@ from ..services import meeting_service
 from .auth import get_current_user_required, get_current_user_optional
 
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
+
+# Participants not seen within this window are considered stale/disconnected
+HEARTBEAT_TIMEOUT_SECONDS = 20
 
 
 @router.post("/instant", response_model=MeetingResponse, status_code=201)
@@ -94,6 +98,56 @@ def leave_meeting(
     if not success:
         raise HTTPException(status_code=404, detail="Participant not found")
     return {"message": "Left meeting successfully"}
+
+
+# ─── Heartbeat endpoint ───────────────────────────────────────────────────────
+
+@router.post("/{meeting_id}/heartbeat")
+def participant_heartbeat(
+    meeting_id: str,
+    participant_id: int = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Lightweight presence heartbeat. Frontend calls this every ~8 seconds.
+    Updates last_seen timestamp for the participant.
+    Also evicts stale participants who haven't sent a heartbeat within HEARTBEAT_TIMEOUT_SECONDS.
+    """
+    now = datetime.utcnow()
+
+    # Update this participant's last_seen
+    participant = (
+        db.query(Participant)
+        .filter(
+            Participant.id == participant_id,
+            Participant.meeting_id == meeting_id,
+            Participant.left_at.is_(None),
+        )
+        .first()
+    )
+    if participant:
+        participant.last_seen = now
+        db.commit()
+
+    # Evict stale participants (last_seen older than HEARTBEAT_TIMEOUT_SECONDS)
+    stale_cutoff = now - timedelta(seconds=HEARTBEAT_TIMEOUT_SECONDS)
+    stale = (
+        db.query(Participant)
+        .filter(
+            Participant.meeting_id == meeting_id,
+            Participant.left_at.is_(None),
+            Participant.last_seen.isnot(None),
+            Participant.last_seen < stale_cutoff,
+        )
+        .all()
+    )
+    for stale_p in stale:
+        stale_p.left_at = now
+
+    if stale:
+        db.commit()
+
+    return {"ok": True, "evicted": len(stale)}
 
 
 @router.patch("/{meeting_id}/participants/{participant_id}/media", response_model=ParticipantResponse)

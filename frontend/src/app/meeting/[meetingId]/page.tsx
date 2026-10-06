@@ -13,6 +13,8 @@ import {
   muteAllParticipants,
   removeParticipant,
   endMeeting,
+  sendHeartbeat,
+  sendBeaconLeave,
   Meeting,
   Participant,
 } from "@/lib/api";
@@ -38,18 +40,13 @@ function RemoteParticipantTile({
 }: RemoteParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const attachVideo = useCallback(
     (el: HTMLVideoElement | null) => {
       videoRef.current = el;
       if (el && stream) {
-        if (el.srcObject !== stream) {
-          el.srcObject = stream;
-        }
-        el.play()
-          .then(() => setIsVideoPlaying(true))
-          .catch(() => setIsVideoPlaying(false));
+        if (el.srcObject !== stream) el.srcObject = stream;
+        el.play().then(() => {}).catch(() => {});
       }
     },
     [stream]
@@ -59,10 +56,8 @@ function RemoteParticipantTile({
     (el: HTMLAudioElement | null) => {
       audioRef.current = el;
       if (el && stream) {
-        if (el.srcObject !== stream) {
-          el.srcObject = stream;
-        }
-        el.play().catch(() => { });
+        if (el.srcObject !== stream) el.srcObject = stream;
+        el.play().catch(() => {});
       }
     },
     [stream]
@@ -70,64 +65,34 @@ function RemoteParticipantTile({
 
   useEffect(() => {
     if (videoRef.current && stream) {
-      if (videoRef.current.srcObject !== stream) {
-        videoRef.current.srcObject = stream;
-      }
-      videoRef.current
-        .play()
-        .then(() => setIsVideoPlaying(true))
-        .catch(() => setIsVideoPlaying(false));
-    } else {
-      setIsVideoPlaying(false);
+      if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream;
+      videoRef.current.play().then(() => {}).catch(() => {});
     }
     if (audioRef.current && stream) {
-      if (audioRef.current.srcObject !== stream) {
-        audioRef.current.srcObject = stream;
-      }
-      audioRef.current.play().catch(() => { });
+      if (audioRef.current.srcObject !== stream) audioRef.current.srcObject = stream;
+      audioRef.current.play().catch(() => {});
     }
   }, [stream, participant.is_video_on]);
 
-  const hasLiveTrack = Boolean(
-    stream &&
-    stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live")
+  const hasLiveVideoTrack = Boolean(
+    stream && stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live")
   );
-
-  const showVideo = hasLiveTrack;
 
   return (
     <div className="zm-video-tile" style={{ position: "relative", overflow: "hidden" }}>
-      {/* Remote Audio output to hear their voice */}
       <audio ref={attachAudio} autoPlay playsInline />
-
-      {/* Remote Video output - ALWAYS in DOM layout so play() & onPlaying work */}
       <video
         ref={attachVideo}
         autoPlay
         playsInline
-        onPlaying={() => setIsVideoPlaying(true)}
-        onPause={() => setIsVideoPlaying(false)}
         className="zm-video-element"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          display: "block",
-        }}
+        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
       />
 
-      {!showVideo && (
+      {!hasLiveVideoTrack && (
         <div
           className="zm-tile-avatar-view"
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 2,
-            backgroundColor: "#11161f",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={{ position: "absolute", inset: 0, zIndex: 2, backgroundColor: "#11161f", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           <div className={`zm-tile-avatar alt-${(index % 4) + 1}`}>
             {participant.display_name.charAt(0).toUpperCase()}
@@ -165,6 +130,42 @@ function RemoteParticipantTile({
   );
 }
 
+// ─── Icon components (defined outside to avoid re-creation on every render) ────
+function MicOnIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+    </svg>
+  );
+}
+function MicOffIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+      <path d="M17 16.95A7 7 0 0 1 5 12v-2" />
+    </svg>
+  );
+}
+function CamOnIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+      <polygon points="23 7 16 12 23 17 23 7" />
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+    </svg>
+  );
+}
+function CamOffIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M21 15.5l-5-3.5v-5l5-3.5v12zM2 5h7.5M16 19H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5" />
+    </svg>
+  );
+}
+
 interface MeetingRoomProps {
   params: Promise<{ meetingId: string }>;
 }
@@ -175,7 +176,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  // Meeting & Participant State
+  // ─── Meeting & Participant State ────────────────────────────────────────────
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipant, setCurrentParticipant] = useState<Participant | null>(null);
@@ -184,17 +185,17 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const [isParticipantRemoved, setIsParticipantRemoved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Local Media State
+  // ─── Local Media State ──────────────────────────────────────────────────────
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [mediaPermissionDenied, setMediaPermissionDenied] = useState(false);
+  // localStream STATE drives the WebRTC hook — must call setLocalStream() to trigger replaceTrack
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  // localStreamRef mirrors localStream state for use inside callbacks/effects without stale closures
   const localStreamRef = useRef<MediaStream | null>(null);
 
-
-
-  // Screen share state
+  // ─── Screen Share State ─────────────────────────────────────────────────────
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const screenTrackRef = useRef<MediaStreamTrack | null>(null);
   const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -202,55 +203,47 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const attachLocalVideo = useCallback((el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el && localStreamRef.current) {
-      if (el.srcObject !== localStreamRef.current) {
-        el.srcObject = localStreamRef.current;
-      }
-      el.play().catch(() => { });
+      if (el.srcObject !== localStreamRef.current) el.srcObject = localStreamRef.current;
+      el.play().catch(() => {});
     }
   }, []);
 
-  // UI Control State
+  // ─── UI Control State ───────────────────────────────────────────────────────
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isShieldOpen, setIsShieldOpen] = useState(false);
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
   const [participantSearch, setParticipantSearch] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
 
-
-  // Concurrency & Polling locks
+  // ─── Concurrency & Polling locks ────────────────────────────────────────────
   const isPollingRef = useRef(false);
   const isLeavingRef = useRef(false);
   const isEndingRef = useRef(false);
   const isActionPendingRef = useRef(false);
   const { token, user } = useAuth();
 
-  // Stop media helper
+  // ─── Stop all local media tracks ────────────────────────────────────────────
   const stopLocalMedia = useCallback(() => {
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => {
-        try {
-          track.stop();
-        } catch {
-          // ignore
-        }
-      });
+      localStreamRef.current.getTracks().forEach((t) => { try { t.stop(); } catch { /* ignore */ } });
       localStreamRef.current = null;
       setLocalStream(null);
     }
+    if (screenTrackRef.current) {
+      try { screenTrackRef.current.stop(); } catch { /* ignore */ }
+      screenTrackRef.current = null;
+    }
+    originalVideoTrackRef.current = null;
   }, []);
 
-
-
-  // 1. Initialize meeting & participant data
+  // ─── 1. Initialize meeting & participant data ────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-
     async function initRoom() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
         const meetingData = await getMeetingById(meetingId);
-
         if (!isMounted) return;
 
         if (meetingData.status === "ended") {
@@ -258,32 +251,22 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           setIsLoading(false);
           return;
         }
-
         setMeeting(meetingData);
 
-        // Fetch active participants
         const participantsData = await getParticipants(meetingId);
         if (!isMounted) return;
         setParticipants(participantsData);
 
-        // Restore participant from sessionStorage if available
         let activeParticipant: Participant | null = null;
         if (typeof window !== "undefined") {
           const stored = sessionStorage.getItem(`zoom_participant_${meetingId}`);
           if (stored) {
-            try {
-              activeParticipant = JSON.parse(stored) as Participant;
-            } catch {
-              activeParticipant = null;
-            }
+            try { activeParticipant = JSON.parse(stored) as Participant; } catch { activeParticipant = null; }
           }
         }
 
-        // Direct URL visit fallback: redirect to pre-join so user can enter their name
         if (!activeParticipant) {
-          startTransition(() => {
-            router.replace(`/meeting/${meetingId}/prejoin`);
-          });
+          startTransition(() => router.replace(`/meeting/${meetingId}/prejoin`));
           return;
         }
 
@@ -292,31 +275,23 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           setIsAudioOn(activeParticipant.is_audio_on);
           setIsVideoOn(activeParticipant.is_video_on);
         }
-
         setIsLoading(false);
       } catch (err: unknown) {
         if (isMounted) {
-          const msg = err instanceof Error ? err.message : "Failed to load meeting";
-          setErrorMessage(msg);
+          setErrorMessage(err instanceof Error ? err.message : "Failed to load meeting");
           setIsLoading(false);
         }
       }
     }
-
     initRoom();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [meetingId]);
 
-  // 2. Safe polling loop (every 3s)
+  // ─── 2. Polling loop (every 3s) ──────────────────────────────────────────────
   useEffect(() => {
     if (isMeetingEnded || isParticipantRemoved || errorMessage) return;
-
     const interval = setInterval(async () => {
       if (document.hidden || isPollingRef.current) return;
-
       try {
         isPollingRef.current = true;
         const [updatedMeeting, updatedParticipants] = await Promise.all([
@@ -329,282 +304,145 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           stopLocalMedia();
           return;
         }
-
         setMeeting(updatedMeeting);
         setParticipants(updatedParticipants);
 
-        // Check if kicked
         if (currentParticipant?.id) {
           const stillActive = updatedParticipants.find((p) => p.id === currentParticipant.id);
           if (!stillActive) {
             setIsParticipantRemoved(true);
             stopLocalMedia();
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem(`zoom_participant_${meetingId}`);
-            }
+            if (typeof window !== "undefined") sessionStorage.removeItem(`zoom_participant_${meetingId}`);
             return;
           }
-
-          // Check remote mute
+          // Detect remote mute
           if (!stillActive.is_audio_on && isAudioOn) {
             setIsAudioOn(false);
-            if (localStreamRef.current) {
-              localStreamRef.current.getAudioTracks().forEach((t) => {
-                t.enabled = false;
-              });
-            }
+            localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = false; });
           }
         }
-      } catch {
-        // network jitter
-      } finally {
+      } catch { /* network jitter */ } finally {
         isPollingRef.current = false;
       }
     }, 3000);
-
     return () => clearInterval(interval);
   }, [meetingId, isMeetingEnded, isParticipantRemoved, errorMessage, currentParticipant, isAudioOn, stopLocalMedia]);
 
-  // 3. Local Camera/Mic Stream
+  // ─── 3. Heartbeat (every 8s) — keeps participant alive in backend ─────────────
+  useEffect(() => {
+    if (!currentParticipant?.id || isMeetingEnded || isParticipantRemoved) return;
+    const pid = currentParticipant.id;
+
+    // Send first heartbeat immediately
+    sendHeartbeat(meetingId, pid);
+
+    const interval = setInterval(() => {
+      sendHeartbeat(meetingId, pid);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [meetingId, currentParticipant?.id, isMeetingEnded, isParticipantRemoved]);
+
+  // ─── 4. Reliable leave on tab close / navigation ─────────────────────────────
+  useEffect(() => {
+    if (!currentParticipant?.id) return;
+    const pid = currentParticipant.id;
+
+    const handlePageHide = () => {
+      sendBeaconLeave(meetingId, pid);
+    };
+
+    // pagehide is more reliable than beforeunload (works on mobile, bfcache, etc.)
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", handlePageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("beforeunload", handlePageHide);
+    };
+  }, [meetingId, currentParticipant?.id]);
+
+  // ─── 5. Local Camera/Mic Stream ───────────────────────────────────────────────
   useEffect(() => {
     let active = true;
-
     async function startMedia() {
       try {
         if (!localStreamRef.current) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          });
-
-          if (!active) {
-            stream.getTracks().forEach((t) => t.stop());
-            return;
-          }
-
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
           localStreamRef.current = stream;
           setLocalStream(stream);
         }
-
         if (videoRef.current && localStreamRef.current) {
           videoRef.current.srcObject = localStreamRef.current;
         }
-
-        localStreamRef.current.getAudioTracks().forEach((t) => {
-          t.enabled = isAudioOn;
-        });
-        localStreamRef.current.getVideoTracks().forEach((t) => {
-          t.enabled = isVideoOn;
-        });
-
+        localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = isAudioOn; });
+        localStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = isVideoOn; });
         setMediaPermissionDenied(false);
       } catch {
-        if (active) {
-          setMediaPermissionDenied(true);
-          setIsVideoOn(false);
-        }
+        if (active) { setMediaPermissionDenied(true); setIsVideoOn(false); }
       }
     }
-
     startMedia();
-
-    const handleUnload = () => {
-      stopLocalMedia();
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
-    window.addEventListener("pagehide", handleUnload);
-
-    return () => {
-      active = false;
-      window.removeEventListener("beforeunload", handleUnload);
-      window.removeEventListener("pagehide", handleUnload);
-    };
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopLocalMedia]);
 
-  // Bind video element when video is toggled back on
+  // Bind video element when video toggled on
   useEffect(() => {
     if (isVideoOn && videoRef.current && localStreamRef.current) {
       videoRef.current.srcObject = localStreamRef.current;
     }
   }, [isVideoOn]);
 
-  // 4. Toggle Audio
+  // ─── 6. Toggle Audio ───────────────────────────────────────────────────────────
   async function handleToggleAudio() {
-    const nextState = !isAudioOn;
-    setIsAudioOn(nextState);
-
-    if (localStreamRef.current) {
-      localStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = nextState;
-      });
-    }
-
+    const next = !isAudioOn;
+    setIsAudioOn(next);
+    localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = next; });
     if (currentParticipant?.id) {
-      try {
-        await updateParticipantMedia(meetingId, currentParticipant.id, {
-          is_audio_on: nextState,
-        });
-      } catch {
-        // ignore
-      }
+      try { await updateParticipantMedia(meetingId, currentParticipant.id, { is_audio_on: next }); } catch { /* ignore */ }
     }
   }
 
-  // 5. Toggle Video
+  // ─── 7. Toggle Video ──────────────────────────────────────────────────────────
   async function handleToggleVideo() {
-    const nextState = !isVideoOn;
-    setIsVideoOn(nextState);
-
-    if (localStreamRef.current) {
-      localStreamRef.current.getVideoTracks().forEach((track) => {
-        track.enabled = nextState;
-      });
-    }
-
+    const next = !isVideoOn;
+    setIsVideoOn(next);
+    localStreamRef.current?.getVideoTracks().forEach((t) => { t.enabled = next; });
     if (currentParticipant?.id) {
-      try {
-        await updateParticipantMedia(meetingId, currentParticipant.id, {
-          is_video_on: nextState,
-        });
-      } catch {
-        // ignore
-      }
+      try { await updateParticipantMedia(meetingId, currentParticipant.id, { is_video_on: next }); } catch { /* ignore */ }
     }
   }
 
-  // 6. Leave Meeting
-  async function handleLeaveMeeting() {
-    if (isLeavingRef.current) return;
-    try {
-      isLeavingRef.current = true;
-      if (currentParticipant?.id) {
-        await leaveMeeting(meetingId, currentParticipant.id);
-      }
-    } catch {
-      // ignore
-    } finally {
-      stopLocalMedia();
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem(`zoom_participant_${meetingId}`);
-      }
-      startTransition(() => {
-        router.push("/dashboard");
-      });
-    }
-  }
-
-  // 7. End Meeting for All
-  async function handleEndMeeting() {
-    if (isEndingRef.current) return;
-    if (!currentParticipant?.id) return;
-    if (!token) return;
-    try {
-      isEndingRef.current = true;
-      await endMeeting(meetingId, currentParticipant.id, token);
-      setIsMeetingEnded(true);
-    } catch {
-      // ignore
-    } finally {
-      stopLocalMedia();
-      setIsEndModalOpen(false);
-      startTransition(() => {
-        router.push("/dashboard");
-      });
-    }
-  }
-
-  // 8. Host Mute All
-  async function handleMuteAll() {
-    if (isActionPendingRef.current) return;
-    if (!currentParticipant?.id) return;
-    if (!token) { alert("You must be signed in to perform this action."); return; }
-    try {
-      isActionPendingRef.current = true;
-      const updated = await muteAllParticipants(meetingId, currentParticipant.id, token);
-      setParticipants(updated);
-      setIsAudioOn(false);
-      if (localStreamRef.current) {
-        localStreamRef.current.getAudioTracks().forEach((t) => {
-          t.enabled = false;
-        });
-      }
-    } catch {
-      alert("Failed to mute participants.");
-    } finally {
-      isActionPendingRef.current = false;
-    }
-  }
-
-  // 9. Host Remove Participant
-  async function handleRemoveParticipant(participantId: number) {
-    if (isActionPendingRef.current) return;
-    if (!currentParticipant?.id) return;
-    if (!token) { alert("You must be signed in to perform this action."); return; }
-    if (!confirm("Are you sure you want to remove this participant?")) return;
-    try {
-      isActionPendingRef.current = true;
-      await removeParticipant(meetingId, participantId, currentParticipant.id, token);
-      setParticipants((prev) => prev.filter((p) => p.id !== participantId));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to remove participant.";
-      alert(msg);
-    } finally {
-      isActionPendingRef.current = false;
-    }
-  }
-
-  // 9b. Host Mute Individual Participant
-  async function handleMuteParticipant(participantId: number) {
-    if (isActionPendingRef.current) return;
-    try {
-      isActionPendingRef.current = true;
-      await updateParticipantMedia(meetingId, participantId, { is_audio_on: false });
-      setParticipants((prev) =>
-        prev.map((p) => p.id === participantId ? { ...p, is_audio_on: false } : p)
-      );
-    } catch {
-      // ignore
-    } finally {
-      isActionPendingRef.current = false;
-    }
-  }
-
-  // 10. Copy Invite Link
-  function copyInviteLink() {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const inviteUrl = `${origin}/meeting/${meetingId}/prejoin`;
-    const inviteText = `Join Zoom Meeting\nMeeting ID: ${meetingId}\nLink: ${inviteUrl}`;
-    navigator.clipboard.writeText(inviteText);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  }
-
-  // 11. Toggle Screen Share
+  // ─── 8. Screen Share ──────────────────────────────────────────────────────────
+  // KEY FIX: We create a NEW MediaStream and call setLocalStream() so that the
+  // useWebRTC hook sees the change and calls sender.replaceTrack() on all peers.
   async function handleToggleScreenShare() {
     if (isSharingScreen) {
-      // Stop screen share and restore camera
+      // ── Stop sharing ──
       if (screenTrackRef.current) {
+        screenTrackRef.current.onended = null; // prevent recursive call
         screenTrackRef.current.stop();
         screenTrackRef.current = null;
       }
-      // Restore original camera track in the local stream
-      if (originalVideoTrackRef.current && localStreamRef.current) {
-        const oldTracks = localStreamRef.current.getVideoTracks();
-        oldTracks.forEach((t) => localStreamRef.current!.removeTrack(t));
-        localStreamRef.current.addTrack(originalVideoTrackRef.current);
-        originalVideoTrackRef.current.enabled = isVideoOn;
-        if (videoRef.current) {
-          videoRef.current.srcObject = localStreamRef.current;
-        }
+
+      // Restore camera video track
+      const camTrack = originalVideoTrackRef.current;
+      if (camTrack) {
+        camTrack.enabled = isVideoOn;
+        const audioTracks = localStreamRef.current?.getAudioTracks() ?? [];
+        const restoredStream = new MediaStream([camTrack, ...audioTracks]);
+        localStreamRef.current = restoredStream;
+        setLocalStream(restoredStream); // ← triggers WebRTC replaceTrack on all peers
+        if (videoRef.current) videoRef.current.srcObject = restoredStream;
         originalVideoTrackRef.current = null;
       }
       setIsSharingScreen(false);
     } else {
-      // Start screen share
+      // ── Start sharing ──
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        if (!navigator.mediaDevices?.getDisplayMedia) {
           alert("Screen sharing is not supported on this device/browser.");
           return;
         }
@@ -613,26 +451,27 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           audio: false,
         });
         const screenTrack = displayStream.getVideoTracks()[0];
+
+        // Chromium motion hint prevents static-screen frame freeze
         if ("contentHint" in screenTrack) {
           (screenTrack as unknown as { contentHint: string }).contentHint = "motion";
         }
         screenTrackRef.current = screenTrack;
 
-        if (localStreamRef.current) {
-          // Save the original camera track
-          const camTrack = localStreamRef.current.getVideoTracks()[0];
-          if (camTrack) originalVideoTrackRef.current = camTrack;
-          // Swap camera track for screen track in the stream
-          localStreamRef.current.getVideoTracks().forEach((t) => localStreamRef.current!.removeTrack(t));
-          localStreamRef.current.addTrack(screenTrack);
-          if (videoRef.current) {
-            videoRef.current.srcObject = localStreamRef.current;
-          }
-        }
+        // Save current camera track so we can restore it later
+        const camTrack = localStreamRef.current?.getVideoTracks()[0] ?? null;
+        if (camTrack) originalVideoTrackRef.current = camTrack;
+
+        // Build new stream: screen video + existing audio
+        const audioTracks = localStreamRef.current?.getAudioTracks() ?? [];
+        const screenStream = new MediaStream([screenTrack, ...audioTracks]);
+        localStreamRef.current = screenStream;
+        setLocalStream(screenStream); // ← triggers WebRTC replaceTrack on all peers
+        if (videoRef.current) videoRef.current.srcObject = screenStream;
 
         setIsSharingScreen(true);
 
-        // Auto-stop when user clicks browser's "Stop Sharing" button
+        // Handle browser's native "Stop sharing" button
         screenTrack.onended = () => {
           handleToggleScreenShare();
         };
@@ -642,75 +481,114 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }
 
+  // ─── 9. Leave Meeting ─────────────────────────────────────────────────────────
+  async function handleLeaveMeeting() {
+    if (isLeavingRef.current) return;
+    try {
+      isLeavingRef.current = true;
+      if (currentParticipant?.id) {
+        await leaveMeeting(meetingId, currentParticipant.id);
+      }
+    } catch { /* ignore */ } finally {
+      stopLocalMedia();
+      if (typeof window !== "undefined") sessionStorage.removeItem(`zoom_participant_${meetingId}`);
+      startTransition(() => router.push("/dashboard"));
+    }
+  }
+
+  // ─── 10. End Meeting for All ──────────────────────────────────────────────────
+  async function handleEndMeeting() {
+    if (isEndingRef.current) return;
+    if (!currentParticipant?.id || !token) return;
+    try {
+      isEndingRef.current = true;
+      await endMeeting(meetingId, currentParticipant.id, token);
+      setIsMeetingEnded(true);
+    } catch { /* ignore */ } finally {
+      stopLocalMedia();
+      setIsEndModalOpen(false);
+      startTransition(() => router.push("/dashboard"));
+    }
+  }
+
+  // ─── 11. Host: Mute All ───────────────────────────────────────────────────────
+  async function handleMuteAll() {
+    if (isActionPendingRef.current || !currentParticipant?.id) return;
+    if (!token) { alert("You must be signed in to perform this action."); return; }
+    try {
+      isActionPendingRef.current = true;
+      const updated = await muteAllParticipants(meetingId, currentParticipant.id, token);
+      setParticipants(updated);
+      setIsAudioOn(false);
+      localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = false; });
+    } catch { alert("Failed to mute participants."); }
+    finally { isActionPendingRef.current = false; }
+  }
+
+  // ─── 12. Host: Remove Participant ─────────────────────────────────────────────
+  async function handleRemoveParticipant(participantId: number) {
+    if (isActionPendingRef.current || !currentParticipant?.id) return;
+    if (!token) { alert("You must be signed in to perform this action."); return; }
+    if (!confirm("Are you sure you want to remove this participant?")) return;
+    try {
+      isActionPendingRef.current = true;
+      await removeParticipant(meetingId, participantId, currentParticipant.id, token);
+      setParticipants((prev) => prev.filter((p) => p.id !== participantId));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to remove participant.");
+    } finally { isActionPendingRef.current = false; }
+  }
+
+  // ─── 13. Host: Toggle Participant Audio (replaces separate Mute button) ────────
+  async function handleToggleParticipantAudio(p: Participant) {
+    if (isActionPendingRef.current || !currentParticipant?.id) return;
+    try {
+      isActionPendingRef.current = true;
+      const updated = await updateParticipantMedia(meetingId, p.id, {
+        is_audio_on: !p.is_audio_on,
+      });
+      setParticipants((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+    } catch { /* ignore */ }
+    finally { isActionPendingRef.current = false; }
+  }
+
+  // ─── 14. Copy Invite Link ─────────────────────────────────────────────────────
+  function copyInviteLink() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const inviteUrl = `${origin}/meeting/${meetingId}/prejoin`;
+    navigator.clipboard.writeText(`Join Zoom Meeting\nMeeting ID: ${meetingId}\nLink: ${inviteUrl}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  }
+
+  // ─── Derived values ───────────────────────────────────────────────────────────
   const isHost =
     currentParticipant?.role === "host" ||
     (Boolean(meeting?.host_name) &&
       Boolean(currentParticipant?.display_name) &&
       currentParticipant?.display_name?.trim().toLowerCase() === meeting?.host_name?.trim().toLowerCase());
 
-  // isAuthenticatedHost: JWT user is the owner of this meeting (End Meeting for All)
   const isAuthenticatedHost =
-    !!token &&
-    !!user &&
-    !!meeting?.host_user_id &&
-    meeting.host_user_id === user.id;
+    !!token && !!user && !!meeting?.host_user_id && meeting.host_user_id === user.id;
 
-  // Only show participants who haven't left (ghost fix)
   const activeParticipants = participants.filter((p) => !p.left_at);
-
   const filteredParticipants = activeParticipants.filter((p) =>
     p.display_name.toLowerCase().includes(participantSearch.toLowerCase())
   );
-
   const remoteParticipants = activeParticipants.filter(
     (p) => !currentParticipant || p.id !== currentParticipant.id
   );
 
-  const { remoteStreams } = useWebRTC(
-    meetingId,
-    currentParticipant?.id,
-    localStream,
-    remoteParticipants
-  );
+  const { remoteStreams } = useWebRTC(meetingId, currentParticipant?.id, localStream, remoteParticipants);
 
   const totalTiles = 1 + remoteParticipants.length;
   const gridClass =
-    totalTiles === 1
-      ? "zm-grid-1"
-      : totalTiles === 2
-        ? "zm-grid-2"
-        : totalTiles <= 4
-          ? "zm-grid-4"
-          : "zm-grid-multi";
+    totalTiles === 1 ? "zm-grid-1" :
+    totalTiles === 2 ? "zm-grid-2" :
+    totalTiles <= 4 ? "zm-grid-4" : "zm-grid-multi";
 
-  // SVG icons reused in participant list
-  const MicOnIcon = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="23" />
-    </svg>
-  );
-  const MicOffIcon = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-      <path d="M17 16.95A7 7 0 0 1 5 12v-2" />
-    </svg>
-  );
-  const CamOnIcon = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-      <polygon points="23 7 16 12 23 17 23 7" />
-      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-    </svg>
-  );
-  const CamOffIcon = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M21 15.5l-5-3.5v-5l5-3.5v12zM2 5h7.5M16 19H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5" />
-    </svg>
-  );
 
+  // ─── Loading / ended / removed screens ───────────────────────────────────────
   if (isLoading) {
     return (
       <div className="zm-room-layout" style={{ backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
@@ -730,9 +608,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           <h2 className="zm-modal-title">This meeting has ended</h2>
           <p className="zm-modal-desc">The host has ended this meeting or the session has expired.</p>
           <div className="zm-modal-actions">
-            <Link href="/dashboard" className="zm-modal-btn danger" style={{ textDecoration: "none" }}>
-              Return to Dashboard
-            </Link>
+            <Link href="/dashboard" className="zm-modal-btn danger" style={{ textDecoration: "none" }}>Return to Dashboard</Link>
           </div>
         </div>
       </div>
@@ -747,22 +623,20 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           <h2 className="zm-modal-title">Removed from Meeting</h2>
           <p className="zm-modal-desc">You were removed from this meeting by the host.</p>
           <div className="zm-modal-actions">
-            <Link href="/dashboard" className="zm-modal-btn secondary" style={{ textDecoration: "none" }}>
-              Return to Dashboard
-            </Link>
+            <Link href="/dashboard" className="zm-modal-btn secondary" style={{ textDecoration: "none" }}>Return to Dashboard</Link>
           </div>
         </div>
       </div>
     );
   }
 
+  // ─── Main Render ──────────────────────────────────────────────────────────────
   return (
     <div className="zm-room-layout">
-      {/* ---------------- Top Navbar (matching Image 1) ---------------- */}
       <Navbar variant="workplace" />
 
       <div className="zm-room-main-container">
-        {/* ---------------- Left Sidebar (matching Image 1) ---------------- */}
+        {/* Left Sidebar */}
         <aside className="zm-room-sidebar">
           <div className="zm-room-side-top">
             <Link href="/dashboard" className="zm-room-side-item" title="Home">
@@ -771,14 +645,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </svg>
               <span>Home</span>
             </Link>
-
             <div className="zm-room-side-item" title="Chat">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               <span>Chat</span>
             </div>
-
             <div className="zm-room-side-item active" title="Meetings">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="23 7 16 12 23 17 23 7" />
@@ -786,7 +658,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </svg>
               <span>Meetings</span>
             </div>
-
             <div className="zm-room-side-item" title="Contacts">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -795,7 +666,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               <span>Contacts</span>
             </div>
           </div>
-
           <div className="zm-room-side-item" title="Settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="3" />
@@ -805,11 +675,11 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           </div>
         </aside>
 
-        {/* ---------------- Central Meeting Viewport (matching Image 1) ---------------- */}
+        {/* Central Meeting Viewport */}
         <section className="zm-room-viewport">
-          {/* Top internal meeting bar matching Image 1 */}
+          {/* Top bar */}
           <div className="zm-viewport-header">
-            <div className="zm-viewport-header-left" onClick={() => setIsShieldOpen((prev) => !prev)}>
+            <div className="zm-viewport-header-left" onClick={() => setIsShieldOpen((p) => !p)}>
               <button type="button" className="zm-info-icon-btn" title="Meeting Information">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
@@ -817,22 +687,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
               </button>
-              <span>{meeting?.title || "Ashwin Toppo's Zoom Meeting"}</span>
+              <span>{meeting?.title || "Zoom Meeting"}</span>
             </div>
-
-            {/* Right icons matching Image 1: Green Shield, Pencil, Sparkle, Grid view, Avatar circle */}
             <div className="zm-viewport-header-right">
-              <button
-                type="button"
-                className="zm-hdr-icon-btn zm-hdr-shield"
-                title="Security"
-                onClick={() => setIsShieldOpen((prev) => !prev)}
-              >
+              <button type="button" className="zm-hdr-icon-btn zm-hdr-shield" title="Security" onClick={() => setIsShieldOpen((p) => !p)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
                 </svg>
               </button>
-
               <button type="button" className="zm-hdr-icon-btn" title="View">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -841,13 +703,10 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   <rect x="3" y="14" width="7" height="7" rx="1" />
                 </svg>
               </button>
-
-              <div className="zm-hdr-avatar-badge" title="Ashwin Toppo">
-                zm
-              </div>
+              <div className="zm-hdr-avatar-badge" title="Ashwin Toppo">zm</div>
             </div>
 
-            {/* Info Dropdown */}
+            {/* Meeting info dropdown */}
             {isShieldOpen && (
               <div className="zm-shield-dropdown">
                 <div className="zm-shield-header">
@@ -862,9 +721,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 </div>
                 <div className="zm-shield-row">
                   <span className="zm-shield-row-label">Meeting ID</span>
-                  <span className="zm-shield-row-value" style={{ fontFamily: "monospace", color: "#2d8cff" }}>
-                    {meeting?.meeting_id}
-                  </span>
+                  <span className="zm-shield-row-value" style={{ fontFamily: "monospace", color: "#2d8cff" }}>{meeting?.meeting_id}</span>
                 </div>
                 <div className="zm-shield-row">
                   <span className="zm-shield-row-label">Host</span>
@@ -880,28 +737,24 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
           {/* Video Canvas */}
           <div className="zm-room-video-canvas" onClick={() => { if (isShieldOpen) setIsShieldOpen(false); }}>
             <div className={`zm-grid ${gridClass}`}>
-              {/* Local User Tile */}
+              {/* Local tile */}
               <div className="zm-video-tile">
                 <video
                   ref={attachLocalVideo}
                   autoPlay
                   playsInline
                   muted
-                  className="zm-video-element mirrored"
-                  style={{ display: isVideoOn && !mediaPermissionDenied ? "block" : "none" }}
+                  // Only mirror camera, NOT screen share
+                  className={`zm-video-element${isSharingScreen ? "" : " mirrored"}`}
+                  style={{ display: (isVideoOn || isSharingScreen) && !mediaPermissionDenied ? "block" : "none" }}
                 />
-
-                {(!isVideoOn || mediaPermissionDenied) && (
+                {(!isVideoOn && !isSharingScreen || mediaPermissionDenied) && (
                   <div className="zm-tile-avatar-view">
                     <div className="zm-tile-avatar">
-                      {currentParticipant?.display_name
-                        ? currentParticipant.display_name.charAt(0).toUpperCase()
-                        : "A"}
+                      {currentParticipant?.display_name ? currentParticipant.display_name.charAt(0).toUpperCase() : "A"}
                     </div>
                   </div>
                 )}
-
-                {/* Nametag matching Image 1: mic state + name */}
                 <div className="zm-tile-nametag">
                   {!isAudioOn ? (
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2.5">
@@ -914,11 +767,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                     </svg>
                   )}
-                  <span>{currentParticipant?.display_name || "Ashwin Toppo"}</span>
+                  <span>
+                    {currentParticipant?.display_name || "You"}
+                    {isSharingScreen && <span style={{ color: "#30d158", marginLeft: 4 }}>● Sharing</span>}
+                  </span>
                 </div>
               </div>
 
-              {/* Remote Participants */}
+              {/* Remote participants */}
               {remoteParticipants.map((p, idx) => (
                 <RemoteParticipantTile
                   key={p.id}
@@ -932,18 +788,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             </div>
           </div>
 
-          {/* ---------------- Slide-in Participants Drawer ---------------- */}
+          {/* Participants Drawer */}
           {isParticipantsOpen && (
             <aside className="zm-side-drawer" style={{ position: "absolute", right: 0, top: 0, bottom: 64 }}>
               <div className="zm-drawer-header">
                 <span className="zm-drawer-title">Participants ({activeParticipants.length || 1})</span>
-                <button
-                  type="button"
-                  className="zm-drawer-close-btn"
-                  onClick={() => setIsParticipantsOpen(false)}
-                >
-                  ✕
-                </button>
+                <button type="button" className="zm-drawer-close-btn" onClick={() => setIsParticipantsOpen(false)}>✕</button>
               </div>
 
               <div className="zm-drawer-search">
@@ -957,28 +807,22 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </div>
 
               <div className="zm-participant-list">
+                {/* Self */}
                 <div className="zm-participant-item">
                   <div className="zm-participant-info">
-                    <div className="zm-participant-avatar">
-                      {currentParticipant?.display_name?.charAt(0).toUpperCase() || "A"}
-                    </div>
+                    <div className="zm-participant-avatar">{currentParticipant?.display_name?.charAt(0).toUpperCase() || "A"}</div>
                     <div className="zm-participant-name">
                       {currentParticipant?.display_name || "Guest"}
-                      <span className="zm-participant-tags">
-                        {isHost ? " (Host, me)" : " (me)"}
-                      </span>
+                      <span className="zm-participant-tags">{isHost ? " (Host, me)" : " (me)"}</span>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span title={isAudioOn ? "Mic on" : "Muted"}>
-                      {isAudioOn ? <MicOnIcon /> : <MicOffIcon />}
-                    </span>
-                    <span title={isVideoOn ? "Camera on" : "Camera off"}>
-                      {isVideoOn ? <CamOnIcon /> : <CamOffIcon />}
-                    </span>
+                    <span title={isAudioOn ? "Mic on" : "Muted"}>{isAudioOn ? <MicOnIcon /> : <MicOffIcon />}</span>
+                    <span title={isVideoOn ? "Camera on" : "Camera off"}>{isVideoOn ? <CamOnIcon /> : <CamOffIcon />}</span>
                   </div>
                 </div>
 
+                {/* Others */}
                 {filteredParticipants
                   .filter((p) => !currentParticipant || p.id !== currentParticipant.id)
                   .map((p) => (
@@ -989,28 +833,21 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                         </div>
                         <div className="zm-participant-name">
                           {p.display_name}
-                          {p.role === "host" && (
-                            <span className="zm-participant-tags"> (Host)</span>
-                          )}
+                          {p.role === "host" && <span className="zm-participant-tags"> (Host)</span>}
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span title={p.is_audio_on ? "Mic on" : "Muted"}>
+                        {/* Mic icon — clickable for host to toggle participant audio */}
+                        <span
+                          title={p.is_audio_on ? (isHost ? "Click to mute" : "Mic on") : (isHost ? "Click to unmute" : "Muted")}
+                          style={{ cursor: isHost ? "pointer" : "default" }}
+                          onClick={isHost ? () => handleToggleParticipantAudio(p) : undefined}
+                        >
                           {p.is_audio_on ? <MicOnIcon /> : <MicOffIcon />}
                         </span>
                         <span title={p.is_video_on ? "Camera on" : "Camera off"}>
                           {p.is_video_on ? <CamOnIcon /> : <CamOffIcon />}
                         </span>
-                        {isHost && p.is_audio_on && (
-                          <button
-                            type="button"
-                            className="zm-tile-action-btn"
-                            style={{ padding: "2px 6px", fontSize: 10 }}
-                            onClick={() => handleMuteParticipant(p.id)}
-                          >
-                            Mute
-                          </button>
-                        )}
                         {isHost && (
                           <button
                             type="button"
@@ -1039,7 +876,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             </aside>
           )}
 
-          {/* ---------------- Bottom Control Toolbar Dock (matching Image 1) ---------------- */}
+          {/* Bottom Dock */}
           <footer className="zm-bottom-dock">
             {/* Left: Audio & Video */}
             <div className="zm-dock-left">
@@ -1070,7 +907,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 <span>Audio</span>
               </button>
 
-              {/* Video (with rounded border box matching Image 1) */}
+              {/* Video */}
               <button
                 type="button"
                 className="zm-dock-item video-box"
@@ -1095,13 +932,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </button>
             </div>
 
-            {/* Center: Participants, Chat, React, Share, Host tools, More */}
+            {/* Center: Participants, Share Screen, Host tools, More */}
             <div className="zm-dock-center">
               {/* Participants */}
               <button
                 type="button"
                 className="zm-dock-item"
-                onClick={() => setIsParticipantsOpen((prev) => !prev)}
+                onClick={() => setIsParticipantsOpen((p) => !p)}
               >
                 <div className="zm-dock-item-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1113,8 +950,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 </div>
                 <span>Participants</span>
               </button>
-
-
 
               {/* Share Screen */}
               <button
@@ -1141,12 +976,12 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 <span>{isSharingScreen ? "Stop Share" : "Share Screen"}</span>
               </button>
 
-              {/* Host tools (Host only) */}
+              {/* Host tools (host only) */}
               {isHost && (
                 <button
                   type="button"
                   className="zm-dock-item"
-                  onClick={() => setIsShieldOpen((prev) => !prev)}
+                  onClick={() => setIsShieldOpen((p) => !p)}
                 >
                   <div className="zm-dock-item-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1175,7 +1010,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
               </button>
             </div>
 
-            {/* Right: End/Leave button matching Image 1 */}
+            {/* Right: End/Leave */}
             <div className="zm-dock-right">
               <button
                 type="button"
@@ -1190,7 +1025,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         </section>
       </div>
 
-      {/* ---------------- End / Leave Modal ---------------- */}
+      {/* End / Leave Modal */}
       {isEndModalOpen && (
         <div className="zm-modal-backdrop" onClick={() => setIsEndModalOpen(false)}>
           <div className="zm-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1205,37 +1040,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             <div className="zm-modal-actions">
               {isAuthenticatedHost ? (
                 <>
-                  <button
-                    type="button"
-                    className="zm-modal-btn danger"
-                    onClick={handleEndMeeting}
-                  >
-                    End Meeting for All
-                  </button>
-                  <button
-                    type="button"
-                    className="zm-modal-btn secondary"
-                    onClick={handleLeaveMeeting}
-                  >
-                    Leave Meeting
-                  </button>
+                  <button type="button" className="zm-modal-btn danger" onClick={handleEndMeeting}>End Meeting for All</button>
+                  <button type="button" className="zm-modal-btn secondary" onClick={handleLeaveMeeting}>Leave Meeting</button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className="zm-modal-btn danger"
-                  onClick={handleLeaveMeeting}
-                >
-                  Leave Meeting
-                </button>
+                <button type="button" className="zm-modal-btn danger" onClick={handleLeaveMeeting}>Leave Meeting</button>
               )}
-              <button
-                type="button"
-                className="zm-modal-btn cancel"
-                onClick={() => setIsEndModalOpen(false)}
-              >
-                Cancel
-              </button>
+              <button type="button" className="zm-modal-btn cancel" onClick={() => setIsEndModalOpen(false)}>Cancel</button>
             </div>
           </div>
         </div>

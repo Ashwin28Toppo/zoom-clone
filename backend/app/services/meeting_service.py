@@ -210,6 +210,7 @@ def join_meeting(
         role=role,
         is_audio_on=request.is_audio_on,
         is_video_on=request.is_video_on,
+        last_seen=datetime.utcnow(),
     )
     db.add(participant)
     db.commit()

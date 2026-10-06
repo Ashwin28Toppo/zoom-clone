@@ -1,10 +1,10 @@
-/**
+﻿/**
  * API client for Zoom Clone backend REST endpoints.
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AuthUser {
   id: number;
@@ -67,7 +67,7 @@ export interface JoinMeetingPayload {
   reconnect_participant_id?: number | null;  // For page-refresh reconnects
 }
 
-// ─── Core Request Helper ─────────────────────────────────────────────────────
+// â”€â”€â”€ Core Request Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function request<T>(
   endpoint: string,
@@ -110,7 +110,7 @@ async function request<T>(
   }
 }
 
-// ─── Auth API ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function signupUser(payload: {
   name: string;
@@ -137,7 +137,7 @@ export async function getCurrentUser(token: string): Promise<AuthUser> {
   return request<AuthUser>("/api/auth/me", {}, token);
 }
 
-// ─── Meeting API ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Meeting API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Create a new instant meeting (requires auth token) */
 export async function createInstantMeeting(
@@ -181,7 +181,7 @@ export async function getRecentMeetings(token: string): Promise<MeetingListRespo
   );
 }
 
-/** Retrieve meeting details by meeting ID — public, no auth required */
+/** Retrieve meeting details by meeting ID â€” public, no auth required */
 export async function getMeetingById(meetingId: string): Promise<Meeting> {
   return request<Meeting>(`/api/meetings/${encodeURIComponent(meetingId)}`, {
     method: "GET",
@@ -189,7 +189,7 @@ export async function getMeetingById(meetingId: string): Promise<Meeting> {
   });
 }
 
-/** Join meeting — no auth required (guest flow) */
+/** Join meeting â€” no auth required (guest flow) */
 export async function joinMeeting(
   meetingId: string,
   payload: JoinMeetingPayload
@@ -205,7 +205,7 @@ export async function joinMeeting(
   });
 }
 
-/** Leave a meeting — no auth required */
+/** Leave a meeting â€” no auth required */
 export async function leaveMeeting(
   meetingId: string,
   participantId: number
@@ -216,7 +216,7 @@ export async function leaveMeeting(
   );
 }
 
-/** Update participant audio/video states — no auth required (self-service) */
+/** Update participant audio/video states â€” no auth required (self-service) */
 export async function updateParticipantMedia(
   meetingId: string,
   participantId: number,
@@ -228,7 +228,7 @@ export async function updateParticipantMedia(
   );
 }
 
-/** Mute all participants (host control) — requires auth token */
+/** Mute all participants (host control) â€” requires auth token */
 export async function muteAllParticipants(
   meetingId: string,
   requesterParticipantId: number,
@@ -241,7 +241,7 @@ export async function muteAllParticipants(
   );
 }
 
-/** Remove participant from meeting (host control) — requires auth token */
+/** Remove participant from meeting (host control) â€” requires auth token */
 export async function removeParticipant(
   meetingId: string,
   participantId: number,
@@ -255,7 +255,7 @@ export async function removeParticipant(
   );
 }
 
-/** End meeting for all participants (host only) — requires auth token */
+/** End meeting for all participants (host only) â€” requires auth token */
 export async function endMeeting(
   meetingId: string,
   requesterParticipantId: number,
@@ -268,10 +268,29 @@ export async function endMeeting(
   );
 }
 
-/** Get all active participants in a meeting — public */
+/** Get all active participants in a meeting â€” public */
 export async function getParticipants(meetingId: string): Promise<Participant[]> {
   return request<Participant[]>(
     `/api/meetings/${encodeURIComponent(meetingId)}/participants`,
     { method: "GET", cache: "no-store" }
   );
+}
+
+
+/** Heartbeat — updates last_seen for presence tracking. Fire-and-forget. */
+export function sendHeartbeat(meetingId: string, participantId: number): void {
+  const url = `${API_BASE_URL}/api/meetings/${encodeURIComponent(meetingId)}/heartbeat?participant_id=${participantId}`;
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(url);
+  } else {
+    fetch(url, { method: "POST" }).catch(() => {});
+  }
+}
+
+/** Reliably notify the backend the participant left (use during page unload). */
+export function sendBeaconLeave(meetingId: string, participantId: number): void {
+  const url = `${API_BASE_URL}/api/meetings/${encodeURIComponent(meetingId)}/leave?participant_id=${participantId}`;
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(url);
+  }
 }

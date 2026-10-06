@@ -70,6 +70,7 @@ class ParticipantResponse(BaseModel):
     is_video_on: bool
     joined_at: datetime
     left_at: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
 
     class Config:
         from_attributes = True

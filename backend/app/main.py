@@ -55,6 +55,15 @@ def _migrate_database():
         if "host_user_id" not in meeting_cols:
             cursor.execute("ALTER TABLE meetings ADD COLUMN host_user_id INTEGER REFERENCES users(id)")
             conn.commit()
+
+        # Add last_seen to participants if missing (heartbeat presence)
+        cursor.execute("PRAGMA table_info(participants)")
+        participant_cols = {row[1] for row in cursor.fetchall()}
+        if "last_seen" not in participant_cols:
+            cursor.execute("ALTER TABLE participants ADD COLUMN last_seen DATETIME")
+            # Back-fill existing rows with joined_at value
+            cursor.execute("UPDATE participants SET last_seen = joined_at WHERE last_seen IS NULL")
+            conn.commit()
     finally:
         conn.close()
 

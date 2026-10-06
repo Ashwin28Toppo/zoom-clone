@@ -59,5 +59,6 @@ class Participant(Base):
     is_video_on = Column(Boolean, default=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
     left_at = Column(DateTime, nullable=True)
+    last_seen = Column(DateTime, default=datetime.utcnow, nullable=True)  # heartbeat presence
 
     meeting = relationship("Meeting", back_populates="participants")
