@@ -287,7 +287,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     return () => { isMounted = false; };
   }, [meetingId]);
 
-  // ─── 2. Polling loop (every 3s) ──────────────────────────────────────────────
+  // ─── 2. Polling loop (every 2s for faster leave/join detection) ──────────────
   useEffect(() => {
     if (isMeetingEnded || isParticipantRemoved || errorMessage) return;
     const interval = setInterval(async () => {
@@ -315,7 +315,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             if (typeof window !== "undefined") sessionStorage.removeItem(`zoom_participant_${meetingId}`);
             return;
           }
-          // Detect remote mute
+          // Detect remote mute by host
           if (!stillActive.is_audio_on && isAudioOn) {
             setIsAudioOn(false);
             localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = false; });
@@ -324,7 +324,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       } catch { /* network jitter */ } finally {
         isPollingRef.current = false;
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [meetingId, isMeetingEnded, isParticipantRemoved, errorMessage, currentParticipant, isAudioOn, stopLocalMedia]);
 
@@ -568,8 +568,14 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       Boolean(currentParticipant?.display_name) &&
       currentParticipant?.display_name?.trim().toLowerCase() === meeting?.host_name?.trim().toLowerCase());
 
+  // isAuthenticatedHost: must be BOTH the JWT-authenticated owner AND have a host role in THIS session.
+  // This prevents a logged-in user who joined as a participant from seeing "End Meeting for All".
   const isAuthenticatedHost =
-    !!token && !!user && !!meeting?.host_user_id && meeting.host_user_id === user.id;
+    isHost &&
+    !!token &&
+    !!user &&
+    !!meeting?.host_user_id &&
+    meeting.host_user_id === user.id;
 
   const activeParticipants = participants.filter((p) => !p.left_at);
   const filteredParticipants = activeParticipants.filter((p) =>
