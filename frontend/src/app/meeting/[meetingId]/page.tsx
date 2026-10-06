@@ -192,9 +192,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  const [isSharingScreen, setIsSharingScreen] = useState(false);
-  const screenTrackRef = useRef<MediaStreamTrack | null>(null);
-  const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+
 
   const attachLocalVideo = useCallback((el: HTMLVideoElement | null) => {
     videoRef.current = el;
@@ -212,8 +210,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
   const [participantSearch, setParticipantSearch] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [activeReaction, setActiveReaction] = useState<string | null>(null);
-  const [isReactionsOpen, setIsReactionsOpen] = useState(false);
+
 
   // Concurrency & Polling locks
   const isPollingRef = useRef(false);
@@ -224,15 +221,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
   // Stop media helper
   const stopLocalMedia = useCallback(() => {
-    if (screenTrackRef.current) {
-      try {
-        screenTrackRef.current.onended = null;
-        screenTrackRef.current.stop();
-      } catch {
-        // ignore
-      }
-      screenTrackRef.current = null;
-    }
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         try {
@@ -246,119 +234,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
   }, []);
 
-  // Stop Screen Sharing
-  const stopScreenShare = useCallback(() => {
-    if (screenTrackRef.current) {
-      try {
-        screenTrackRef.current.onended = null;
-        screenTrackRef.current.stop();
-      } catch {
-        // ignore
-      }
-      screenTrackRef.current = null;
-    }
 
-    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
-    const newStream = new MediaStream();
-    if (audioTrack) {
-      newStream.addTrack(audioTrack);
-    }
-
-    if (originalVideoTrackRef.current && originalVideoTrackRef.current.readyState === "live") {
-      newStream.addTrack(originalVideoTrackRef.current);
-      originalVideoTrackRef.current = null;
-    } else if (isVideoOn) {
-      navigator.mediaDevices
-        .getUserMedia({ video: true })
-        .then((camStream) => {
-          const freshTrack = camStream.getVideoTracks()[0];
-          if (freshTrack) {
-            const restoredStream = new MediaStream();
-            if (audioTrack) restoredStream.addTrack(audioTrack);
-            restoredStream.addTrack(freshTrack);
-            localStreamRef.current = restoredStream;
-            setLocalStream(restoredStream);
-            if (videoRef.current) {
-              videoRef.current.srcObject = restoredStream;
-            }
-          }
-        })
-        .catch(() => {});
-    }
-
-    localStreamRef.current = newStream;
-    setLocalStream(newStream);
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = newStream;
-    }
-
-    setIsSharingScreen(false);
-
-    if (currentParticipant?.id) {
-      updateParticipantMedia(meetingId, currentParticipant.id, {
-        is_video_on: isVideoOn,
-      }).catch(() => {});
-    }
-  }, [isVideoOn, currentParticipant, meetingId]);
-
-  // Toggle Screen Sharing
-  async function handleToggleScreenShare() {
-    if (isSharingScreen) {
-      stopScreenShare();
-    } else {
-      try {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true,
-        });
-
-        const screenTrack = displayStream.getVideoTracks()[0];
-        if (!screenTrack) return;
-
-        if ("contentHint" in screenTrack) {
-          (screenTrack as unknown as { contentHint: string }).contentHint = "motion";
-        }
-
-        screenTrackRef.current = screenTrack;
-
-        if (localStreamRef.current) {
-          const currentCamTrack = localStreamRef.current.getVideoTracks()[0];
-          if (currentCamTrack && currentCamTrack !== screenTrack) {
-            originalVideoTrackRef.current = currentCamTrack;
-          }
-        }
-
-        screenTrack.onended = () => {
-          stopScreenShare();
-        };
-
-        const audioTrack = localStreamRef.current?.getAudioTracks()[0];
-        const combinedStream = new MediaStream();
-        if (audioTrack) {
-          combinedStream.addTrack(audioTrack);
-        }
-        combinedStream.addTrack(screenTrack);
-
-        localStreamRef.current = combinedStream;
-        setLocalStream(combinedStream);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = combinedStream;
-        }
-
-        setIsSharingScreen(true);
-
-        if (currentParticipant?.id) {
-          updateParticipantMedia(meetingId, currentParticipant.id, {
-            is_video_on: true,
-          }).catch(() => {});
-        }
-      } catch {
-        // User cancelled browser dialog or permission denied
-      }
-    }
-  }
 
   // 1. Initialize meeting & participant data
   useEffect(() => {
@@ -700,12 +576,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     setTimeout(() => setCopiedLink(false), 2000);
   }
 
-  // 11. Trigger Reaction
-  function triggerReaction(emoji: string) {
-    setActiveReaction(emoji);
-    setIsReactionsOpen(false);
-    setTimeout(() => setActiveReaction(null), 2500);
-  }
+
 
   // isHost: participant has host role (used for mute-all / remove controls)
   const isHost =
@@ -748,6 +619,34 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
         : totalTiles <= 4
           ? "zm-grid-4"
           : "zm-grid-multi";
+
+  // SVG icons reused in participant list
+  const MicOnIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+    </svg>
+  );
+  const MicOffIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+      <path d="M17 16.95A7 7 0 0 1 5 12v-2" />
+    </svg>
+  );
+  const CamOnIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+      <polygon points="23 7 16 12 23 17 23 7" />
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+    </svg>
+  );
+  const CamOffIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M21 15.5l-5-3.5v-5l5-3.5v12zM2 5h7.5M16 19H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5" />
+    </svg>
+  );
 
   if (isLoading) {
     return (
@@ -917,52 +816,6 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
 
           {/* Video Canvas */}
           <div className="zm-room-video-canvas" onClick={() => { if (isShieldOpen) setIsShieldOpen(false); }}>
-            {isSharingScreen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  backgroundColor: "#007a3d",
-                  color: "#ffffff",
-                  padding: "6px 16px",
-                  borderRadius: 20,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  zIndex: 100,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                }}
-              >
-                <span>🖥️ You are sharing screen</span>
-                <button
-                  type="button"
-                  onClick={stopScreenShare}
-                  style={{
-                    backgroundColor: "#ff4d4f",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "3px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                >
-                  Stop Share
-                </button>
-              </div>
-            )}
-
-            {activeReaction && (
-              <div style={{ position: "absolute", bottom: 80, left: 24, fontSize: 44, zIndex: 99 }}>
-                {activeReaction}
-              </div>
-            )}
-
             <div className={`zm-grid ${gridClass}`}>
               {/* Local User Tile */}
               <div className="zm-video-tile">
@@ -971,11 +824,11 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   autoPlay
                   playsInline
                   muted
-                  className={`zm-video-element ${!isSharingScreen ? "mirrored" : ""}`}
-                  style={{ display: (isVideoOn || isSharingScreen) && !mediaPermissionDenied ? "block" : "none" }}
+                  className="zm-video-element mirrored"
+                  style={{ display: isVideoOn && !mediaPermissionDenied ? "block" : "none" }}
                 />
 
-                {(!isVideoOn && !isSharingScreen || mediaPermissionDenied) && (
+                {(!isVideoOn || mediaPermissionDenied) && (
                   <div className="zm-tile-avatar-view">
                     <div className="zm-tile-avatar">
                       {currentParticipant?.display_name
@@ -1053,12 +906,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {isAudioOn ? (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#30d158"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /></svg>
-                    ) : (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12" /></svg>
-                    )}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span title={isAudioOn ? "Mic on" : "Muted"}>
+                      {isAudioOn ? <MicOnIcon /> : <MicOffIcon />}
+                    </span>
+                    <span title={isVideoOn ? "Camera on" : "Camera off"}>
+                      {isVideoOn ? <CamOnIcon /> : <CamOffIcon />}
+                    </span>
                   </div>
                 </div>
 
@@ -1077,12 +931,13 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                           )}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {p.is_audio_on ? (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#30d158"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /></svg>
-                        ) : (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12" /></svg>
-                        )}
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span title={p.is_audio_on ? "Mic on" : "Muted"}>
+                          {p.is_audio_on ? <MicOnIcon /> : <MicOffIcon />}
+                        </span>
+                        <span title={p.is_video_on ? "Camera on" : "Camera off"}>
+                          {p.is_video_on ? <CamOnIcon /> : <CamOffIcon />}
+                        </span>
                         {isHost && p.is_audio_on && (
                           <button
                             type="button"
@@ -1196,89 +1051,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                 <span>Participants</span>
               </button>
 
-              {/* Chat */}
-              <button
-                type="button"
-                className="zm-dock-item"
-                onClick={() => alert("In-meeting chat is available.")}
-              >
-                <div className="zm-dock-item-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="zm-dock-caret">⌃</span>
-                </div>
-                <span>Chat</span>
-              </button>
 
-              {/* React */}
-              <div style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  className="zm-dock-item"
-                  onClick={() => setIsReactionsOpen((prev) => !prev)}
-                >
-                  <div className="zm-dock-item-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
-                    <span className="zm-dock-caret">⌃</span>
-                  </div>
-                  <span>React</span>
-                </button>
-
-                {isReactionsOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 56,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      backgroundColor: "#1e222b",
-                      border: "1px solid #333946",
-                      borderRadius: 24,
-                      padding: "6px 12px",
-                      display: "flex",
-                      gap: 10,
-                      fontSize: 22,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.7)",
-                      zIndex: 100,
-                    }}
-                  >
-                    {["👍", "👏", "❤️", "😂", "🎉", "✋"].map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 22 }}
-                        onClick={() => triggerReaction(emoji)}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Share Screen button - available for all participants (hosts & guests) */}
-              <button
-                type="button"
-                className={`zm-dock-item ${isSharingScreen ? "active-share" : ""}`}
-                onClick={handleToggleScreenShare}
-                title={isSharingScreen ? "Stop Sharing Screen" : "Share Screen"}
-              >
-                <div className="zm-dock-item-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isSharingScreen ? "#30d158" : "currentColor"} strokeWidth="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                    <polyline points="16 9 12 5 8 9" />
-                  </svg>
-                  <span className="zm-dock-caret">⌃</span>
-                </div>
-                <span style={isSharingScreen ? { color: "#30d158", fontWeight: 600 } : undefined}>
-                  {isSharingScreen ? "Stop Share" : "Share"}
-                </span>
-              </button>
 
               {/* Host tools (Host only) */}
               {isHost && (
